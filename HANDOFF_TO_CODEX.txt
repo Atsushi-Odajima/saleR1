@@ -1,0 +1,61 @@
+Koeito v1.0.0 — 引継ぎ（Codex / 次の担当者向け）
+作成：2026-10-04 UTC / ブランチ claude/koeito-r01-app / 状態：REVIEW_READY（本番配布は BLOCKED：販売者の実値・署名が必要）
+コミット：このファイルを含むコミット（git log -1 で確認）。前段：8e0313d
+
+1. 指示（Codex 用）
+  R01_Koeito/01_claude_code_prompt.txt（仕様の正）、実物の差分（git diff 65a30b9..HEAD）、docs/TEST_REPORT.txt を照合し、
+  優先順に レビュー → 修正 → 試験 を実行してください：
+    ① データ損失（Repo のトランザクション、cascade、復元の原子性、保存状態表示、migration 手順）
+    ② 公開漏洩（ReportDTO 許可リスト、伏字の文字置換、CSV、ファイル名、ログ）
+    ③ 引用アンカー（UTF-16/書記素、selection→offset、slice 一致の検証箇所）
+    ④ Windows/PWA 配布（Electron セキュリティ、protocol、印刷、SW 更新、release ゲート）
+  見た目を一般的な SaaS（青・Inter・KPIカード・サイドバー・3ペイン）へ置き換えないこと。失敗する assert を消して通さないこと。
+
+2. 変更範囲
+  R01_Koeito/  企画パック（無改変で追加）
+  app/src/domain/  純粋関数：text, excerpt, finding, report, reportHtml, csvExport, importParse, search, backup, bundle, license, schema, demo
+  app/src/db/      Dexie（db.ts）、Repo（repo.ts）、migrate.ts
+  app/src/app/     session（ライセンス・ロック・デモ）、router、data（liveQuery）、saveStatus、exportReport、pwa、writerLock
+  app/src/ui/      画面 S00〜S06・S01a・検索・ヘルプ、ExcerptDialog、selection、useAutosave、app.css（tokens）
+  app/src/sw/sw.js  service worker
+  app/electron/    main.cts / preload.cts
+  app/scripts/     sync-assets, ensure-test-keys, generate-keypair, generate-license, dist-win, build-pwa, make-release, verify-release
+  app/tests/       unit（Vitest 75件）、e2e（Playwright 13件 + Electron 3件）、fixtures
+  docs/ README.txt release-docs/ marketing/ seller/
+
+3. 起動・試験
+  README.txt 参照。cd app; npm ci; npm run dev / npm run test / npm run test:e2e / ./playwright-electron.sh（Linux は xvfb）
+
+4. 試験結果の要約（docs/TEST_REPORT.txt）
+  PASS：AC01–09, 13, 15, 17, 19（Chromium/Linux Electron）  PARTIAL：AC10, 12, 14, 16  UNVERIFIED：AC11, AC18
+
+5. 未検証環境
+  Windows 11 x64 実機（インストーラー/portable の起動、%APPDATA%\Koeito、printToPDF とフォント、通信遮断、性能）
+  iPhone Safari / ホーム画面PWA（選択ハンドル、段落から選ぶ、印刷、共有、ファイル保存、バックアップ復元）
+  VoiceOver/ナレーター、実ブラウザ200%ズーム、PWA の HTTPS 本番配信と _headers
+
+6. 優先課題（次にやること）
+  1) Windows 11 実機で AC18 一式と AC10・AC16 を実施し TEST_REPORT を更新
+  2) iPhone 実機で AC11（HTTPS ステージング）
+  3) 販売者：release-config.json（実値）、署名証明書、generate-keypair（リポジトリ外）→ dist:win / build:pwa / make-release / verify:release
+  4) UI 改善候補：S03 の大量引用（2000件）時の仮想化、S04 カード上のメタ行（スマホでやや詰まる）、
+     「編集権を取得」失敗時の alert を画面内メッセージへ
+  5) 商標確認・実顧客検証（企画パック 02/05 参照）
+
+7. データ migration
+  schemaVersion 1（meta 表）、IndexedDB version 1。MIGRATIONS は空。追加時は src/db/migrate.ts に {from,to,run} を足し、
+  snapshot DB（koeito-v1-snapshot）への複製→単一トランザクション移行の手順を維持。未来の schemaVersion / VersionError は起動停止（データ保持）。
+
+8. 配布物
+  release-test/（gitignore）：Koeito-Setup-1.0.0-TEST.exe, Koeito-Portable-1.0.0-TEST.exe（未署名・試験公開鍵）, Koeito-PWA-1.0.0-TEST.zip,
+    README_JA / QUICKSTART / FAQ / THIRD_PARTY_LICENSES / SHA256SUMS → 販売不可。再生成：README.txt 3節。
+  release/：本番用。現時点では未作成（BLOCKED）。seller/source.zip は make-release で生成（gitignore）。
+
+9. 素材参照
+  R01_Koeito/assets（SHA256SUMS で検証して app/public へコピー）：logo_horizontal.svg, logo_mark.svg, pwa_icon_192/512.png,
+  apple_touch_icon_180.png, icons.svg（app/src/ui/icons.svg に同一コピー）, fonts/*.ttf + licenses/*-OFL.txt, design_tokens.json（app.css に反映）。
+  ASSET_PENDING なし。
+
+10. 版番号・依存
+  app 1.0.0。依存の版は docs/DECISIONS.txt D01（package.json は exact、package-lock.json をコミット）。
+  設計判断は D01〜D27。
