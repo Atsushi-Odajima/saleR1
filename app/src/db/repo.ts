@@ -66,6 +66,19 @@ function check<T>(schema: z.ZodType<T>, v: unknown, what: string): T {
   return r.data;
 }
 
+/** Optimistic concurrency: a revision number, or the field values the edit was based on. */
+export type Expected = number | Record<string, unknown>;
+
+function assertExpected(cur: { revision: number } & Record<string, unknown>, expected: Expected, what: string) {
+  if (typeof expected === 'number') {
+    if (cur.revision !== expected) throw new RepoError('conflict', `別の操作で${what}が更新されています`);
+    return;
+  }
+  for (const [k, v] of Object.entries(expected)) {
+    if (JSON.stringify(cur[k]) !== JSON.stringify(v)) throw new RepoError('conflict', `別の操作で${what}が更新されています`);
+  }
+}
+
 export interface NewSourceInput {
   participantId?: string; // existing
   newParticipant?: { id: string; alias: string; internalNote: string };
@@ -138,11 +151,11 @@ export class Repo {
     });
   }
 
-  async updateProject(id: string, expectedRevision: number, patch: Partial<Pick<Project, 'title' | 'question' | 'periodStart' | 'periodEnd' | 'limitations'>>): Promise<Project> {
+  async updateProject(id: string, expected: Expected, patch: Partial<Pick<Project, 'title' | 'question' | 'periodStart' | 'periodEnd' | 'limitations'>>): Promise<Project> {
     return this.tx(['projects'], async () => {
       const cur = await this.db.projects.get(id);
       if (!cur) throw new RepoError('not_found', '調査が見つかりません');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作で調査が更新されています');
+      assertExpected(cur, expected, '調査');
       const next = check(ProjectSchema, { ...cur, ...patch, revision: cur.revision + 1, updatedAt: nowIso() }, '調査');
       await this.db.projects.put(next);
       return next;
@@ -160,11 +173,11 @@ export class Repo {
   }
 
   // ---------- participants ----------
-  async updateParticipant(id: string, expectedRevision: number, patch: { alias?: string; internalNote?: string }): Promise<Participant> {
+  async updateParticipant(id: string, expected: Expected, patch: { alias?: string; internalNote?: string }): Promise<Participant> {
     return this.tx(['participants', 'projects'], async () => {
       const cur = await this.db.participants.get(id);
       if (!cur) throw new RepoError('not_found', '参加者が見つかりません');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作で参加者が更新されています');
+      assertExpected(cur, expected, '参加者');
       const next = check(ParticipantSchema, { ...cur, ...patch, alias: (patch.alias ?? cur.alias).trim(), revision: cur.revision + 1, updatedAt: nowIso() }, '参加者');
       if (next.alias !== cur.alias) {
         const clash = await this.db.participants.where('projectId').equals(cur.projectId).filter((x) => x.alias === next.alias && x.id !== id).first();
@@ -269,11 +282,11 @@ export class Repo {
     });
   }
 
-  async updateSource(id: string, expectedRevision: number, patch: { title?: string; participantId?: string }): Promise<Source> {
+  async updateSource(id: string, expected: Expected, patch: { title?: string; participantId?: string }): Promise<Source> {
     return this.tx(['sources', 'participants', 'projects'], async () => {
       const cur = await this.db.sources.get(id);
       if (!cur) throw new RepoError('not_found', '資料が見つかりません');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作で資料が更新されています');
+      assertExpected(cur, expected, '資料');
       if (patch.participantId) {
         const pa = await this.db.participants.get(patch.participantId);
         if (!pa || pa.projectId !== cur.projectId) throw new RepoError('validation', '参加者が見つかりません');
@@ -373,13 +386,13 @@ export class Repo {
    */
   async updateExcerpt(
     id: string,
-    expectedRevision: number,
+    expected: Expected,
     patch: { themeIds?: string[]; note?: string; redactions?: Range[]; publicReviewedHash?: string | null },
   ): Promise<Excerpt> {
     return this.tx(['excerpts', 'sources', 'themes', 'projects'], async () => {
       const cur = await this.db.excerpts.get(id);
       if (!cur) throw new RepoError('not_found', '引用が見つかりません（削除された可能性があります）');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作で引用が更新されています');
+      assertExpected(cur, expected, '引用');
       const src = await this.db.sources.get(cur.sourceId);
       if (!src || src.text.slice(cur.startUtf16, cur.endUtf16) !== cur.quote) throw new RepoError('validation', '原文と引用の位置が一致しません。引用を作り直してください');
       if (patch.themeIds) await this.assertThemes(cur.projectId, patch.themeIds);
@@ -443,11 +456,11 @@ export class Repo {
     });
   }
 
-  async updateTheme(id: string, expectedRevision: number, patch: { label?: string; description?: string }): Promise<Theme> {
+  async updateTheme(id: string, expected: Expected, patch: { label?: string; description?: string }): Promise<Theme> {
     return this.tx(['themes', 'projects'], async () => {
       const cur = await this.db.themes.get(id);
       if (!cur) throw new RepoError('not_found', 'テーマが見つかりません');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作でテーマが更新されています');
+      assertExpected(cur, expected, 'テーマ');
       const label = patch.label !== undefined ? patch.label.trim() : cur.label;
       const next = check(ThemeSchema, { ...cur, label, labelKey: themeKey(label), description: patch.description ?? cur.description, revision: cur.revision + 1, updatedAt: nowIso() }, 'テーマ');
       await this.db.themes.put(next);
@@ -550,13 +563,13 @@ export class Repo {
 
   async updateFinding(
     id: string,
-    expectedRevision: number,
+    expected: Expected,
     patch: Partial<Pick<Finding, 'title' | 'interpretation' | 'proposal' | 'expectedChange' | 'nextCheck' | 'counterCheck' | 'counterNote'>>,
   ): Promise<Finding> {
     return this.tx(['findings', 'evidenceLinks', 'excerpts', 'sources', 'projects'], async () => {
       const cur = await this.db.findings.get(id);
       if (!cur) throw new RepoError('not_found', '気づきが見つかりません（削除された可能性があります）');
-      if (cur.revision !== expectedRevision) throw new RepoError('conflict', '別の操作で気づきが更新されています');
+      assertExpected(cur, expected, '気づき');
       let next = check(FindingSchema, { ...cur, ...patch, revision: cur.revision + 1, updatedAt: nowIso() }, '気づき');
       // edits that break readiness put the finding back to draft
       if (next.status === 'ready' && (await this.findingIssues(next)).length) next = { ...next, status: 'draft' };

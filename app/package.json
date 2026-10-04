@@ -11,7 +11,23 @@
   "engines": {
     "node": ">=22.12"
   },
-  "scripts": {},
+  "scripts": {
+    "prepare:assets": "node scripts/sync-assets.mjs && node scripts/ensure-test-keys.mjs",
+    "predev": "npm run prepare:assets",
+    "dev": "vite",
+    "dev:desktop": "npm run build && npm run build:electron && electron .",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.electron.json --noEmit",
+    "pretest": "node scripts/ensure-test-keys.mjs",
+    "test": "vitest run",
+    "test:e2e": "npm run build && npm run build:electron && playwright test",
+    "prebuild": "npm run prepare:assets",
+    "build": "vite build",
+    "build:electron": "node -e \"require('fs').rmSync('dist-electron',{recursive:true,force:true})\" && tsc -p tsconfig.electron.json",
+    "build:pwa": "node scripts/build-pwa.mjs",
+    "dist:win": "node scripts/dist-win.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
+    "perf:fixture": "node scripts/make-perf-fixture.mjs"
+  },
   "dependencies": {
     "dexie": "4.4.6",
     "dexie-react-hooks": "4.4.0",

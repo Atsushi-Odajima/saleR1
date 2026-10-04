@@ -1,6 +1,9 @@
 // Text primitives. JavaScript string offsets are UTF-16 code units; user-facing
 // length limits are Unicode code points (Array.from). Keep the two separate.
-import Graphemer from 'graphemer';
+import GraphemerModule from 'graphemer';
+
+// graphemer is CommonJS with an `exports.default`; normalise across bundlers / Node.
+const Graphemer = ((GraphemerModule as unknown as { default?: typeof GraphemerModule }).default ?? GraphemerModule) as typeof GraphemerModule;
 
 export function cpLength(s: string): number {
   let n = 0;

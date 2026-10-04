@@ -1,0 +1,8 @@
+{
+  "pwaUrl": "",
+  "licensePublicKeyJwk": { "kty": "EC", "crv": "P-256", "x": "", "y": "" },
+  "sellerName": "",
+  "sellerContact": "",
+  "salesUrl": null,
+  "helpUrl": null
+}
