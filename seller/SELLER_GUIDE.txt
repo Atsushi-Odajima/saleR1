@@ -1,0 +1,48 @@
+Koeito 販売者ガイド（運用・ライセンス発行・公開鍵配置・署名）/ DRAFT
+このフォルダーと source.zip は販売者専用です。購入者向け配布物（release/）に混ぜないでください。
+
+■ 1. 署名鍵（ライセンス用）
+  作成：node app\scripts\generate-keypair.mjs --out-dir <リポジトリ外のフォルダー>
+    → koeito-license.private.jwk.json（秘密鍵。Git・ZIP・メール・チャット・ログに入れない。オフラインで2か所に保管）
+    → koeito-license.public.jwk.json（公開鍵）
+  紛失すると新しいライセンスを発行できません。漏えいした場合は鍵を作り直し、v1.x の新ビルドを配布して既存購入者に再発行します
+  （オンライン失効の仕組みは初版にありません）。
+
+■ 2. 公開鍵の配置
+  app\release-config.json の "licensePublicKeyJwk" に公開鍵（kty, crv, x, y のみ）を貼ります。"d" は絶対に入れない
+  （入れると build/verify が失敗します）。試験鍵（app\.dev-keys）は本番ビルドで拒否されます。
+
+■ 3. ライセンスの発行（オフライン）
+  node app\scripts\generate-license.mjs --private-key-path <秘密鍵のパス> --out <購入者名を含まないファイル名>.koeito-license
+    任意：--license-id <UUID>（再発行で同じIDを使う場合） / --issued-at <ISO日時>
+  出力されるのは {payloadB64, signatureB64}。購入者の氏名・メール等は含めません。
+  台帳（購入日・注文番号・licenseId）は販売者側で別管理してください（アプリには送られません）。
+  送付：販売プラットフォームの添付・ダウンロード機能など、販売者の通常の手段で。今回の開発作業では実顧客へ発行・送信していません。
+
+■ 4. 配布物の作成
+  README.txt「4. 本番配布」の順に実行し、npm run verify:release が全項目 PASS であること、MANUAL 項目を自分で確認すること。
+
+■ 5. Windows のコード署名
+  - 証明書（OV/EV）を取得し、electron-builder の環境変数で指定：
+      $env:CSC_LINK="<pfxのパス>"; $env:CSC_KEY_PASSWORD="<パスワード>"   （EVはベンダー手順に従う）
+  - npm run dist:win の後、Windows で確認：
+      Get-AuthenticodeSignature .\release\Koeito-Setup-x.y.z.exe | Format-List Status,SignerCertificate
+      → Status が Valid であること（portable も同様）
+  - 未署名のまま公開しない。購入者に SmartScreen 等の保護機能を無効にさせる案内はしない。
+  - 本リポジトリで作成した *-TEST.exe は未署名・試験鍵入りで、販売できません。
+
+■ 6. PWA の配信
+  - Koeito-PWA-x.y.z.zip を HTTPS の静的ホスティングへ展開（release-config.json の pwaUrl と同じ場所）。
+  - 同梱の _headers（Cloudflare Pages / Netlify 形式）で CSP・frame-ancestors・nosniff と、sw.js/index.html の no-cache を付与。
+    他のホスティングでは同等のヘッダーを設定してください。
+  - ルーティングはハッシュ（#/...）のため、サーバー側のリライト設定は不要です。
+  - 更新時は新しい zip を丸ごと置き換え。利用者には「再読込して更新」が表示され、勝手には切り替わりません。
+  - 配信を停止しても、Windows 版とバックアップは引き続き使えます（販売ページに明記）。
+
+■ 7. 版の上げ方
+  app\package.json の version を上げる → 変更点を記録 → 試験 → 配布物作成 → verify:release。
+  データ形式を変える場合は app\src\db\migrate.ts に migration を追加し、v1→v2 fixture と同様の試験を追加（docs\DECISIONS.txt D20）。
+
+■ 8. 問い合わせ対応の原則
+  購入者から原文・調査ファイル・バックアップを受け取らない。版・OS・表示されたエラー文言だけを聞く。
+  SUPPORT_POLICY_DRAFT.txt を参照。

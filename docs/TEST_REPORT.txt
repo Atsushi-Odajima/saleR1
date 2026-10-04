@@ -1,0 +1,84 @@
+Koeito v1.0.0 — 試験報告 / docs/TEST_REPORT.txt
+実行日：2026-10-04（UTC。JSTでは2026-10-05）  コミット：HANDOFF_TO_CODEX.txt 記載の HEAD
+実行環境（すべて同一）：Linux 6.18 コンテナ、Intel Xeon 2.10GHz 4コア、RAM 16GB、Node v22.22.0、
+  Chromium（Playwright 1.63 / /opt/pw-browsers/chromium-1194, headless）、Electron 44.5.1（xvfb、root のため --no-sandbox）、
+  wine 9.0（NSIS 生成のみ）。Windows 11 実機・iPhone 実機は使用していない。
+判定：PASS（自動試験で確認）/ PARTIAL（一部のみ確認）/ UNVERIFIED（未実施）/ FAIL
+
+実行コマンドと結果
+  cd app; npm run typecheck                       → エラー0
+  cd app; npm run test                            → 9 files, 75 tests passed
+  cd app; npx playwright test --project=desktop   → 13 passed（1.8分）
+  cd app; ./playwright-electron.sh                → 3 passed
+  KOEITO_ALLOW_TEST_BUILD=1 xvfb-run -a node scripts/dist-win.mjs → release-test/Koeito-Setup-1.0.0-TEST.exe, Koeito-Portable-1.0.0-TEST.exe（未署名）
+  KOEITO_ALLOW_TEST_BUILD=1 node scripts/build-pwa.mjs → release-test/Koeito-PWA-1.0.0-TEST.zip
+  npm run verify:release                          → FAIL（期待どおり：release-config.json 未設定・試験ビルド・未署名）
+
+AC01 正常ルート — PASS（Chromium）
+  試験：tests/e2e/ac01-flow.spec.ts。同梱 examples の3資料を取込→各資料から引用→支持2＋反証1→提案→提出可→
+  採用→限界記入→公開確認3件→正式HTML保存→再読込後に同内容、全引用の slice 一致。
+  期待：HTMLに「P01 / S01・P002」等の原文位置。実測：一致、草案表記なし、2人・2引用。
+  Windows版での同ルートは UNVERIFIED（Electron/Linux で取込・再起動復元のみ確認：electron.spec.ts）。
+AC02 集計 — PASS
+  tests/unit/finding-report.test.ts：P01支持2・P02支持1 → 支持引用3／支持参加者2、P03反証は支持件数に含めない。
+  画面表示：ac01（2人・2引用／1人・1引用）。
+AC03 文字位置 — PASS
+  tests/unit/text-excerpt.test.ts：絵文字（肌色修飾）、ZWJ家族絵文字、結合文字（が+U+0301）、日本語、CRLF、同一文の繰り返し、
+  重なった引用の分割、境界破壊の拒否。Intl.Segmenter とバンドル代替（graphemer）の両方で同じ境界。
+AC04 取込 — PASS
+  単体：引用符/セル内改行/カンマ/BOM/SJIS/空必須列/壊れたUTF-8/NUL/1001行/101行/10MiB超/20000字超。
+  E2E：ac04-05（UI経由、失敗後の DB 件数不変、SJIS 切替）。
+AC05 重複・削除 — PASS
+  単体 repo.test.ts（同一IDの同時作成1件、batch冪等、cascade、draft戻し）。E2E ac04-05（取込/作成のダブルクリック、同範囲引用は既存を開く、
+  資料削除→気づき草案→正式出力ブロック、影響件数表示）。
+AC06 保存失敗 — PASS
+  quota・transaction 失敗・revision 競合を注入（repo.fault / 直接DB更新）。「保存済み」を出さず「未保存」、入力保持、バックアップ導線表示、
+  競合は上書きせず入力をコピー用に表示。単体 repo.test.ts と E2E ac06-07。
+AC07 複数タブ — PASS（Chromium）
+  2つ目のタブは読み取り専用、最初のタブが開いている間は取得不可（stealなし）、閉じた後「編集権を取得」で編集可、
+  後から開いた古いタブは書込み拒否（readonly）。Electron の二重起動拒否は electron.spec.ts で PASS。
+AC08 バックアップ — PASS
+  単体 backup.test.ts / repo.test.ts：全/1調査の往復、誤パスワード、改ざん、未来version、未来schema、iterations 改変、不正参照、重複ID、
+  未知プロパティ、30MiB超、失敗時0件変更、ID振り直し・（読込）付与。E2E ac08：UIで保存→別プロファイルへ復元→再取込警告→改ざん拒否。
+AC09 公開漏洩 — PASS（Chromium／ブラウザ印刷経路）
+  ac09-leak.spec.ts：SECRET_SOURCE_A（伏字）・SECRET_NOTE_B（内部メモ×2）・本名テスト値（CSV参加者値）・SECRET_TITLE_C（内部タイトル）・
+  SECRET_FILE_D（元ファイル名）を投入し、HTML・CSV・PDF抽出テキスト（pdfjs）・DOM全属性・プレビューiframe srcdoc に出ないことを確認。
+  伏字は文字置換。Windows printToPDF 経路での同試験は UNVERIFIED（Linux Electron の PDF 生成は AC10 で確認）。
+AC10 PDF — PARTIAL
+  PASS（Linux Electron printToPDF）：日本語、長い見出し、0件（1ページ）/50件（51ページ）、300/800字引用、空白ページなし、置換文字なし、
+  目視で端の切れ・見出しの孤立なし（1〜3ページ）。UNVERIFIED：Windows 11 上の printToPDF・フォント・印刷。
+AC11 iPhone — UNVERIFIED（実機なし）。360/390px のレイアウト・44px 操作のみ Chromium で確認。
+AC12 offline — PARTIAL
+  PASS：PWA（Chromium、localhost）で SW 登録後に通信遮断→再読込→ライセンス→取込→引用→HTML→バックアップ完走。
+  初回の shell 取得は online が必要（README/FAQ に明記）。UNVERIFIED：Windows版での通信遮断試験、iPhone ホーム画面PWA。
+AC13 通信 — PASS（アプリの通信）
+  network-offline.spec.ts：全リクエストが同一オリジンの GET（静的ファイル）のみ。外部API/analytics/フォントCDN 0件、URLに調査文字列なし。
+  Electron：外部 fetch 遮断・window.open 拒否・外部ナビゲーション拒否を確認。
+  注：試験中、Chromium 本体が google.com 等へ接続を試みた（プロキシで拒否）。アプリのページからの要求ではない。
+AC14 レスポンシブ — PARTIAL
+  PASS：S00/S01/S01a/S02/S03/S04/S04編集/S05/S06/help/検索/デモS04 × 360×800・390×844・768×1024・1440×960・720×480（200%拡大の代替）
+  で横 overflow 0、表示中の button/.btn/select/input/.choice が 44px 以上。キーボード：ダイアログのフォーカス移動・Tab閉じ込め・Esc・起点復帰。
+  UNVERIFIED：実ブラウザの200%ズーム操作、VoiceOver/ナレーターでの読み順。
+AC15 a11y — PASS（自動）
+  axe-core（wcag2a/2aa/21a/21aa）serious/critical 0（上記全画面、360・1440幅）。発見1件（提案ボックスの補足文コントラスト4.29）を修正（D25）。
+  自動検査は読みやすさの保証ではない。
+AC16 性能 — PARTIAL（Linux 計測）
+  fixture：20資料×10,000字、400引用、20気づき（tests/e2e/seed.ts）。計測（ms）：S01 760 / S02 576 / S03 1291 / S04 704 / S05 1164 /
+  検索 229（150msデバウンス込み）。目標（初回表示3秒・検索1秒）を満たす。指定 Windows 11 試験機での計測は UNVERIFIED。
+AC17 license — PASS
+  license.test.ts：試験署名正常、payload/署名の1byte改変、再シリアライズ拒否、別product、major違い、不正JSON、未知項目、別鍵、鍵未設定、
+  CLI の --private-key-path 必須・試験鍵の --test 必須。release-config.test.ts：試験鍵・秘密成分 d・プレースホルダー拒否。
+  verify:release：dist・app.asar・PWA zip から試験公開鍵を検出して FAIL（期待どおり）。
+AC18 配布 — UNVERIFIED / BLOCKED
+  Linux 上で NSIS インストーラーと portable.exe を生成（未署名・試験鍵・TEST名）。Node の無い Windows 11 でのインストール→初回起動→
+  ライセンス→1件出力→終了再起動は未実施。PWA の HTTPS 配信・直URL遷移も未実施。
+  本番配布は release-config.json（実際の PWA URL・公開鍵・連絡先）とコード署名証明書が無いため BLOCKED。
+AC19 ブランド — PASS（自動＋目視）
+  CSS/レポートに Inter・青・KPI・常設サイドバー・3ペインなし（使用色は tokens と仕様値＋D25 のみ）。同梱 SVG ロゴ・OFLフォントをローカル配信。
+  1440/390 のスクリーンショットを ui_desktop.png / ui_mobile.png と目視比較（構成・余白・番号・引用列・Next move ボックスが対応）。
+AC20 完成区分 — 本書。未実行の項目を成功扱いにしていない。
+
+既知の制限・注意
+  - Electron の試験は root 実行のため --no-sandbox（Chromium の OS サンドボックス無効）で行った。renderer の sandbox:true 設定は確認済み。
+  - PWA の「PDFにする」はブラウザの印刷ダイアログ。保存の成否は取得できないため記録しない（D17）。
+  - ヘッドレス Chromium は非ASCIIのダウンロード名を捨てるため、ファイル名は ASCII にした（D26）。

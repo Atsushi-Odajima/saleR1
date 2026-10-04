@@ -1,4 +1,4 @@
-Koeito — タスクと進捗 / docs/TASKS.txt
+Koeito — タスクと進捗 / docs/TASKS.txt（2026-10-04 UTC 更新）
 状態：DONE（実装済み・自動試験あり）/ PART（一部）/ TODO / BLOCKED（外部要因）/ UNVERIFIED（実機未確認）
 
 Phase1 demo fixture→Project/Source取込→引用→保存→再起動復元
@@ -8,8 +8,15 @@ Phase1 demo fixture→Project/Source取込→引用→保存→再起動復元
 Phase2 テーマ→Finding/EvidenceLink→公開伏字→レポートHTML
   DONE  S03/S04/S05、正式/草案HTML、公開確認ハッシュ、1件の提案を最後まで通す（e2e AC01）
 Phase3 encrypted backup→復元→revision/複数タブ→CSVとエラー状態
-  （進行中）
+  DONE  バックアップ/復元（AC08）、Web Locks（AC07）、保存失敗・競合（AC06）、取込エラー（AC04）、引用CSV、migration手順＋v1→v2 fixture
 Phase4 ブランドUI・レスポンシブ・PWA→Electron→ライセンス→PDF→配布候補
-  （進行中）
+  DONE  ブランドUI（tokens）、レスポンシブ（AC14）、PWA/SW（AC12）、Electron（custom protocol・sandbox・IPC）、ライセンス、PDF（Linux）
+  DONE  dist:win（NSIS/portable 試験候補・未署名）、build:pwa、make-release、verify:release
+  BLOCKED 本番配布物：release-config.json の実値・コード署名証明書（販売者）
 Phase5 試験・アクセシビリティ・セキュリティ確認→販売資料→引継ぎ
-  TODO
+  DONE  axe（AC15）、通信（AC13）、漏洩（AC09）、性能（AC16 Linux）、TEST_REPORT、販売ページ原稿（DRAFT）、CLAIMS_LEDGER、HANDOFF
+  UNVERIFIED Windows 11 実機（AC10 Windows部分、AC16、AC18）、iPhone 実機（AC11）、VoiceOver
+  TODO（販売前）商標確認、実顧客5人での課題確認、価格・連絡先確定、署名、Windows/iPhone 実機試験
+
+再開コマンド
+  cd app; npm ci; npm run test; npm run test:e2e; ./playwright-electron.sh
