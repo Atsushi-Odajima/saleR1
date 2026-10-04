@@ -26,18 +26,8 @@
     "build:pwa": "node scripts/build-pwa.mjs",
     "dist:win": "node scripts/dist-win.mjs",
     "verify:release": "node scripts/verify-release.mjs",
-    "perf:fixture": "node scripts/make-perf-fixture.mjs"
-  },
-  "dependencies": {
-    "dexie": "4.4.6",
-    "dexie-react-hooks": "4.4.0",
-    "fake-indexeddb": "6.2.5",
-    "graphemer": "1.4.0",
-    "harfbuzzjs": "1.6.2",
-    "papaparse": "5.7.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "zod": "4.6.5"
+    "perf:fixture": "node scripts/make-perf-fixture.mjs",
+    "test:electron": "npm run build && npm run build:electron && ./playwright-electron.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
@@ -50,12 +40,70 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
+    "dexie": "4.4.6",
+    "dexie-react-hooks": "4.4.0",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
+    "fake-indexeddb": "6.2.5",
+    "graphemer": "1.4.0",
+    "harfbuzzjs": "1.6.2",
     "jsdom": "30.1.2",
+    "papaparse": "5.7.0",
     "pdfjs-dist": "6.4.299",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "typescript": "7.0.2",
     "vite": "8.3.2",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "zod": "4.6.5"
+  },
+  "build": {
+    "appId": "jp.koeito.app",
+    "productName": "Koeito",
+    "copyright": "Koeito",
+    "directories": {
+      "output": "out/win",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/*.cjs",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/brand/pwa_icon_512.png",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Koeito",
+      "artifactName": "Koeito-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "Koeito-Portable-${version}.${ext}"
+    },
+    "publish": null
   }
 }

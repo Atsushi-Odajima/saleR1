@@ -1,0 +1,6 @@
+# large/binary distributables are produced by scripts, never committed
+release-test/
+release/*.exe
+release/*.zip
+release/*.blockmap
+seller/source.zip
