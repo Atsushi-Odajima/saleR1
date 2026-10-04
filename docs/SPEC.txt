@@ -1,0 +1,64 @@
+Koeito（コエイト）— 確定仕様の要約 / docs/SPEC.txt
+UTF-8 / 作成 2026-10-04 (UTC) / 原典: R01_Koeito/01_claude_code_prompt.txt rev1.0, 03_brand_and_ui_spec.txt rev1.0
+
+本書は原典の要約と、実装で確定させた解釈の索引です。矛盾したときは原典（01→03→tokens→SVG）が優先します。
+実装の判断理由は docs/DECISIONS.txt、進捗は docs/TASKS.txt、試験結果は docs/TEST_REPORT.txt。
+
+1. 商品
+- 顧客インタビューの文章から引用を残し、気づき・反証・改善案を結び付け、日本語の提出レポート（HTML/PDF）を作る買い切りアプリ。
+- 対象：フリーランスのUX/Web制作者、少人数の調査・企画担当。1案件3〜20資料。
+- 流れ：調査作成→文章取込→原文から引用→テーマ→支持/反証付きの気づき→改善案→公開内容点検→HTML/PDF。
+- 表示しないこと：自動で結論を発見、需要の保証、統計的代表性、確信度/重要度の自動計算、「完全匿名化」。
+- 価格（4,980円/7,800円）は検証案。販売開始・価格確約・架空レビューはしない。
+
+2. 実装範囲（初回販売版）
+調査の作成/改名/削除、参加者別名、TXT/CSV/貼付取込、原文不変保存、引用範囲選択、テーマ分類、気づき編集、
+支持/反証/文脈リンク、改善案、公開用伏字、並べ替え、検索、草案/正式HTML・PDF、引用CSV、暗号化バックアップ/復元、
+ライセンス取込（オフライン署名検証）、デモデータ（メモリのみ）、PWA、Windows配布（NSIS/portable）。
+実装しない：AI API、音声認識、PDF/DOCX入力、画像分析、URL収集、外部同期、会員登録、共同編集、チャット、メール送信、
+アプリ内決済、翻訳、統計検定、自動確信度。
+
+3. データ（app/src/domain/schema.ts が正）
+- DB名 koeito-v1、IndexedDB version 1、schemaVersion 1（meta表）。未知プロパティは拒否（zod strictObject）。
+- Project / Participant / Source / Excerpt / Theme / Finding / EvidenceLink / ExportRecord / Settings。
+- 全ID UUID、日時UTC ISO8601。文字数上限はコードポイント、オフセットはUTF-16（半開区間）。
+- Source.text は CRLF/CR→LF と先頭BOM1文字の除去のみ。以後不変。sha256は正規化後UTF-8。
+- 段落：LF区切り、空行も数える。表示 S01 / P001。
+- Excerpt.quote === source.text.slice(start,end) を保存・復元・正式出力で検証。ずれたら拒否（付け替えない）。
+- 伏字はquote内の範囲。ソート・重なり/隣接統合・書記素境界。公開文は「［伏字］」で文字自体を置換。
+- 公開確認ハッシュ = SHA256(公開文, 別名, 資料番号, 範囲)。変化したら要再確認。
+- 支持した人数 = supportsリンクのdistinct participant。引用数と別表示。異なる声/文脈は分母に入れない。
+- 上限：50調査/端末、1調査100資料・100参加者・2000引用・100テーマ・50気づき・原文合計100万字、
+  入力ファイル10MiB、CSV1000行（1回100資料）、バックアップ30MiB。
+
+4. 取込・検索・保存
+- TXT：UTF-8（BOM可）既定、Shift_JIS選択可。厳格デコード、置換文字/NULは拒否または再選択。
+- CSV：Papa Parse（RFC4180相当）。列割当（参加者/本文必須、タイトル任意）、プレビュー→1トランザクション確定。
+  不正行は行番号表示で全件未確定。重複（sha256）は「取り込まない/別資料として取り込む」を選択。
+- 検索：原文・引用・テーマ・気づき。NFKC+小文字化は検索時のみ。150msデバウンス、上位100件＋続き。
+- 保存：500msデバウンス、blurで即保存、コミット後のみ「この端末に保存済み」。競合は上書きせず提示。
+- Web Locksで1 writer。2つ目は読み取り専用、「編集権を取得」で再取得（stealしない）。
+- Electron は requestSingleInstanceLock も使用。
+
+5. バックアップ（.koeito）
+{format:'koeito-backup',version:1,kdf:{PBKDF2,SHA-256,600000,salt16},cipher:{AES-GCM,iv12,tagLength128},payload}
+AAD 'koeito-backup:1'。パスワード12〜128文字。全調査/1調査。復元は新規調査として全IDを振り直し atomic 追加。
+iterations≠600000、未来version/schemaは拒否。失敗時は0件変更。
+
+6. 出力
+- ReportDTO は許可リストで構築。HTMLは単一ファイル、script/イベント属性/リモートURL/画像なし、全エスケープ、
+  サブセット化したフォントをdata URLで埋込、印刷CSS（A4、余白18/18/20mm、本文10.5pt/1.7）。
+- 正式：採用≥1、全採用がready、全リンク引用の公開確認ハッシュ一致、問いと限界の記入。not_checked は「反証確認は未実施」を出力。
+- 草案：不備可、表紙と不足箇所に「草案・根拠未確認」。
+- PDF：Windows=隔離BrowserWindow+printToPDF+保存ダイアログ。PWA=新規文書ウィンドウ→ブラウザ印刷（保存確認不可のため記録しない）。
+- 引用CSV：BOM、CRLF、全フィールド引用、式インジェクション対策（先頭空白/制御文字後の = + - @ も）。
+
+7. ライセンス
+{payloadB64,signatureB64}、payload bytes に ECDSA P-256/SHA-256、raw r||s 64byte。
+payload {version:1,product:'koeito',licenseId,edition:'personal-v1',issuedAt,major:1}。期限・端末ID・個人情報なし。
+未読込：同梱サンプルをメモリだけで編集・草案出力。無効でも既存データの閲覧/HTML出力/バックアップは可（編集のみ停止）。
+
+8. UI（03_brand_and_ui_spec.txt）
+- 色・書体・余白・状態は design_tokens.json と仕様の数値どおり（app/src/ui/app.css）。青・Inter・KPIカード・常設サイドバー・3ペイン禁止。
+- 画面 S00 はじめる / S01 声を集める（S01a CSV列割当）/ S02 声を読む / S03 声を束ねる / S04 気づきと次の一手 / S05 提案書 / S06 データと設定。
+- 上部4工程ナビ（01 声を集める・02 声を束ねる・03 気づき・04 提案書）。

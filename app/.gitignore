@@ -13,3 +13,4 @@ release-config.json
 *.koeito
 *.private.jwk.json
 *.pem
+test-reports/

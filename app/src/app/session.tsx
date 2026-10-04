@@ -1,7 +1,8 @@
 // Session: which data store is active, whether this tab may write, license state.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { IDBFactory as FakeIDBFactory, IDBKeyRange as FakeIDBKeyRange } from 'fake-indexeddb';
-import { KoeitoDB, DB_NAME } from '../db/db';
+import { KoeitoDB, DB_NAME, SNAPSHOT_DB_NAME } from '../db/db';
+import { runMigrations, FutureSchemaError } from '../db/migrate';
 import { Repo } from '../db/repo';
 import { buildDemoBundle } from '../domain/demo';
 import { verifyLicense, LICENSE_ERROR_LABEL } from '../domain/license';
@@ -125,7 +126,19 @@ export function SessionProvider({ children, fallback, onFatal }: { children: Rea
         const demo = await createDemoRepo();
         let lockState: LockState = 'unsupported';
         if (locksSupported()) lockState = (await acquireWriterLock()) ? 'held' : 'busy';
-        if (lockState === 'held' && !(await db.meta.get('schemaVersion'))) await db.meta.put({ key: 'schemaVersion', value: SCHEMA_VERSION });
+        if (lockState === 'held') {
+          if (!(await db.meta.get('schemaVersion'))) await db.meta.put({ key: 'schemaVersion', value: SCHEMA_VERSION });
+          try {
+            await runMigrations(db, async () => {
+              const snap = new KoeitoDB(SNAPSHOT_DB_NAME);
+              await snap.open();
+              return snap;
+            });
+          } catch (e) {
+            if (e instanceof FutureSchemaError) throw new FatalStartupError('新しい版のデータです', 'この端末のデータは新しい版のKoeitoで更新されています。データは削除していません。');
+            throw new FatalStartupError('データの更新に失敗しました', 'データは削除していません。直前の状態は端末内の控えに残っています。サポートへ版番号をお知らせください。');
+          }
+        }
         const stored = await real.getSetting<LicenseFile>('license');
         let lic: LicenseState = { state: 'none' };
         if (stored) {

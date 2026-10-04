@@ -1,0 +1,15 @@
+Koeito — タスクと進捗 / docs/TASKS.txt
+状態：DONE（実装済み・自動試験あり）/ PART（一部）/ TODO / BLOCKED（外部要因）/ UNVERIFIED（実機未確認）
+
+Phase1 demo fixture→Project/Source取込→引用→保存→再起動復元
+  DONE  ドメイン（文字位置・書記素・伏字・集計・レポート・CSV・取込・検索・バックアップ・ライセンス）＋単体試験
+  DONE  Dexie DB / Repo（atomic transaction、cascade、上限、二重送信防止、競合検出）＋単体試験
+  DONE  S00/S01/S01a/S02、デモ（メモリ）、再読込後の復元（e2e AC01）
+Phase2 テーマ→Finding/EvidenceLink→公開伏字→レポートHTML
+  DONE  S03/S04/S05、正式/草案HTML、公開確認ハッシュ、1件の提案を最後まで通す（e2e AC01）
+Phase3 encrypted backup→復元→revision/複数タブ→CSVとエラー状態
+  （進行中）
+Phase4 ブランドUI・レスポンシブ・PWA→Electron→ライセンス→PDF→配布候補
+  （進行中）
+Phase5 試験・アクセシビリティ・セキュリティ確認→販売資料→引継ぎ
+  TODO

@@ -43,6 +43,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
     }),
     save: (x, known) => repo.updateProject(p.id, known, { ...x, title: x.title.trim() }),
   });
+  const [bandOpen, setBandOpen] = useState(() => !p.limitations);
   const [blockers, setBlockers] = useState<ReportBlocker[] | null>(null);
   const [infos, setInfos] = useState<ExcerptPublicInfo[]>([]);
   const [mode, setMode] = useState<'formal' | 'draft'>('formal');
@@ -110,7 +111,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
       try {
         const r = await buildReport(repo, p.id, draft);
         if (!r.html) return setResult({ kind: 'warning', text: '正式出力の条件を満たしていません。下の点検項目を確認してください。' });
-        const outcome = await saveTextFile('html', safeFileName(p.title, 'html', draft), r.html);
+        const outcome = await saveTextFile('html', safeFileName('report', 'html', draft), r.html);
         if (outcome === 'cancelled') return setResult({ kind: 'warning', text: '保存をキャンセルしました。ファイルは作成していません。' });
         await record('html');
         setResult({ kind: 'success', text: outcome === 'saved' ? 'HTMLファイルを保存しました。' : 'ファイルを作成しました（ブラウザのダウンロード）。保存先はブラウザの設定によります。' });
@@ -125,7 +126,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
       try {
         const r = await buildReport(repo, p.id, draft);
         if (!r.html) return setResult({ kind: 'warning', text: '正式出力の条件を満たしていません。下の点検項目を確認してください。' });
-        const outcome = await exportPdf(r.html, safeFileName(p.title, 'pdf', draft));
+        const outcome = await exportPdf(r.html, safeFileName('report', 'pdf', draft));
         if (outcome === 'saved') {
           await record('pdf');
           setResult({ kind: 'success', text: 'PDFを保存しました。' });
@@ -143,7 +144,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
       setResult(null);
       try {
         const { csv, unreviewedHint } = await buildExcerptCsv(repo, p.id);
-        const outcome = await saveTextFile('csv', safeFileName(`${p.title}_引用`, 'csv', false), csv);
+        const outcome = await saveTextFile('csv', safeFileName('quotes', 'csv', false), csv);
         if (outcome === 'cancelled') return setResult({ kind: 'warning', text: '保存をキャンセルしました。' });
         setResult({ kind: unreviewedHint ? 'warning' : 'success', text: `引用CSVを作成しました（公開用の引用のみ）。${unreviewedHint ? `公開内容を未確認の引用が${unreviewedHint}件含まれます。共有前に伏字を確認してください。` : ''}` });
       } catch {
@@ -155,7 +156,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
     exp.run(async () => {
       const r = await buildReport(repo, p.id, draft);
       if (!r.html) return setResult({ kind: 'warning', text: '正式出力の条件を満たしていません。' });
-      const ok = await shareFile(safeFileName(p.title, 'html', draft), r.html, 'text/html');
+      const ok = await shareFile(safeFileName('report', 'html', draft), r.html, 'text/html');
       setResult(ok ? { kind: 'success', text: '共有シートに渡しました。' } : { kind: 'warning', text: 'この環境では共有できませんでした。「HTMLを保存」を使ってください。' });
     });
 
@@ -182,7 +183,7 @@ function ReportBody({ kind, data: d, repo }: { kind: 'p' | 'd'; data: ProjectDat
         </div>
       </section>
 
-      <details className="settings-band" open={!p.limitations}>
+      <details className="settings-band" open={bandOpen} onToggle={(e) => setBandOpen((e.target as HTMLDetailsElement).open)}>
         <summary>対象と範囲（表紙に載る内容）</summary>
         <div className="inner">
           {a.conflict && (

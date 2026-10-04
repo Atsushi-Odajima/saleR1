@@ -77,9 +77,9 @@ export async function buildExcerptCsv(repo: Repo, pid: string): Promise<{ csv: s
   return { csv: excerptsCsv(rows), unreviewedHint: unreviewed };
 }
 
-export function safeFileName(title: string, ext: string, draft: boolean): string {
-  const base = Array.from(title.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim()).slice(0, 60).join('') || 'koeito-report';
+/** ASCII-only names: some browsers drop non-ASCII download names, and titles stay out of file names. */
+export function safeFileName(kind: 'report' | 'quotes', ext: string, draft: boolean): string {
   const d = new Date();
   const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-  return `${base}${draft ? '_草案' : ''}_${stamp}.${ext}`;
+  return `koeito-${kind}${draft ? '-draft' : ''}-${stamp}.${ext}`;
 }

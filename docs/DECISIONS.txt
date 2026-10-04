@@ -1,0 +1,90 @@
+Koeito — 設計判断の記録 / docs/DECISIONS.txt
+仕様の範囲内で実装者が決めたこと。各項目：判断 / 理由 / 影響。
+
+D01 バージョン（2026-10-04 に npm レジストリと nodejs.org/dist/index.json で確認、package.json に exact 固定、lockfile コミット）
+  Node LTS: v24.21.0 "Krypton"（開発コンテナは v22.22.0 で実行。engines は >=22.12）
+  electron 44.5.1 / electron-builder 26.15.3 / react 19.3.0 / vite 8.3.2 / @vitejs/plugin-react 6.1.1 / typescript 7.0.2 /
+  dexie 4.4.6 / dexie-react-hooks 4.4.0 / zod 4.6.5 / papaparse 5.7.0 / vitest 5.0.3 / @playwright/test 1.63.0 /
+  @axe-core/playwright 4.13.0 / harfbuzzjs 1.6.2 / graphemer 1.4.0 / fake-indexeddb 6.2.5 / pdfjs-dist 6.4.299
+  影響：Windows PCでは Node 24 LTS を推奨。
+
+D02 リポジトリ構成：企画パック R01_Koeito/ は無改変で同梱。実装は app/。文書は docs/、販売素材は marketing/、配布物は release/。
+  ブランド素材（フォント・ロゴ・アイコン・OFL）は scripts/sync-assets.mjs がパックの SHA256SUMS で検証して app/public へコピー（Gitには重複保存しない）。
+
+D03 PWA はプラグインを使わず自前の service worker（src/sw/sw.js）。ビルド時に全出力を precache、キャッシュ名に内容ハッシュ。
+  install で skipWaiting しない。更新はバナー「再読込して更新」を利用者が押したときだけ SKIP（入力消失を防ぐ）。
+
+D04 CSP：仕様の出発点に次を追加。
+  script-src 'wasm-unsafe-eval'：レポート用フォントのサブセット化（HarfBuzz wasm）に必要。unsafe-eval は不使用。
+  style-src 'unsafe-inline'：PWAで印刷用の新規文書（blob:）は作成元のCSPを継承するため、レポートの埋込<style>に必要。
+     スクリプトは引き続き 'self' のみ。
+  font-src data:：レポート埋込フォント。img-src data: blob:、worker-src 'self'、manifest-src 'self'、frame-src 'self'（プレビューiframe）。
+  frame-ancestors はmetaで効かないため、Electronはレスポンスヘッダー、PWAは dist/_headers（Netlify/Cloudflare Pages形式）で付与。
+
+D05 デモ（ライセンス未読込）：fake-indexeddb（純JSのメモリ実装）上に同じ Dexie スキーマ・同じ Repo を作る。
+  → 同じコード経路で編集・草案出力でき、端末に一切保存しない。ルートは #/d/<id>/...（実データは #/p/<id>/...）。
+  サンプルでは取込・正式出力を無効化。ライセンス有効時も「サンプルを試す」は同じメモリ版で、実データに混ざらない。
+
+D06 競合検出：仕様の「前revision一致」を基本に、フォーム自動保存では「編集の基にした項目値が現在値と一致」を検証する
+  （Repo.update*(id, expected)）。理由：子の変更で Project.revision が上がるたびに表題フォームが偽の競合になるのを避けるため。
+  数値revisionの検証も同じ関数で使える。競合時は上書きせず、入力内容をコピー用に表示し「最新の内容を読み込む」を提示。
+
+D07 Project.revision は調査内のどの変更でも+1（ExportRecord.projectRevision の意味を「出力時点の調査の版」とするため）。
+
+D08 Theme に labelKey（NFKC+trim+小文字）を追加保存。重複は警告のみ（作成は止めない）。
+
+D09 EvidenceLink にも共通項目（createdAt/updatedAt/revision）を持たせた（仕様「共通」に従う）。
+
+D10 選択範囲の端の改行は範囲から外す（原文は変えない）。書記素の途中で切れる選択は拒否し、自動補正しない。
+  代替選択（スマホ等）：「段落から選ぶ」で1段落内の文字を開始/終了の順に押す。段落をまたぐ引用は通常の選択で行う。
+
+D11 S04「対象の問い」は調査の問い（Project.question）を編集画面の冒頭に表示し、気づきの見出し（title）を別フィールドとした。
+
+D12 反証確認の初期値は not_checked（「反証確認は未実施」を選んだ状態）。ready 判定上は選択済みとして扱い、出力に必ず明記。
+
+D13 根拠リンクの削除・役割変更や項目の空欄化で ready 条件を満たさなくなった気づきは、その場で draft に戻す。
+  資料/引用の削除で根拠を失った気づきも draft に戻す（仕様どおり）。
+
+D14 CSVの参加者値は実名の可能性があるため、別名は P01 形式を自動付与し、元の値は Participant.internalNote（非公開）にだけ残す。
+  既存の別名と同じ値は「結合する」チェックを利用者が入れたときだけ結合（既定は結合しない）。
+
+D15 タイトル初期値は「資料 S0n」「資料（CSV n行目）」。ファイル名は originalFilename（内部）にだけ保存し、提出物へ流用しない。
+
+D16 復元済みバックアップの digest（ファイルのSHA-256、内容は含まない）を Settings.importedBackupDigests に最大50件保持し、
+  同じファイルの再読込を警告する（仕様「再取込はdigest一致を警告して承認」のため。Settings の許可項目に追加）。
+
+D17 ExportRecord は「実際にファイルが渡ったと分かるとき」だけ記録：HTML（Electron保存/ブラウザダウンロード開始）、PDF（Electron保存のみ）。
+  PWAの印刷ダイアログは結果が分からないため記録しない。読み取り専用タブでは記録しない。
+
+D18 レポートのフォント：Noto Serif JP / Noto Sans JP / Fraunces（数字のみ）を HarfBuzz で使用文字にサブセットし data URL で埋込。
+  失敗時はシステムフォントで出力を継続（出力自体は止めない）。UIのフォントは TTF をそのまま配信（約23MB、PWAで初回取得）。
+
+D19 Web Locks 非対応環境は編集不可（疑似ロックなし）。IndexedDB 非対応/起動失敗はデータを消さずにエラー表示。
+
+D20 マイグレーション：v1.0 では migration なし。meta.schemaVersion > 1 または IndexedDB VersionError のときは起動を止めて
+  データを保持。将来の migration は「snapshot DB（koeito-v1-snapshot）へ単一トランザクションで複製→移行→直前1版保持」の順
+  （app/src/db/migrate.ts と試験 fixture で手順を固定）。
+
+D21 Electron：custom protocol koeito://app（standard/secure）。dist 外・..・%2e%2e・バックスラッシュ・NULを拒否。
+  全 permission 拒否、webRequest は koeito://app と data:/blob:koeito:// 以外を拒否、ナビゲーション/新規ウィンドウ拒否、
+  許可済み HTTPS（販売/ヘルプURL）だけ OS ブラウザで開く。preload は用途別4関数のみ。印刷は別パーティション・preloadなしの隠しウィンドウ。
+  開発コンテナ（root実行）では Chromium の OS サンドボックスに --no-sandbox が必要（試験時のみ。配布物では使わない）。
+
+D22 ライセンス鍵：試験鍵は app/.dev-keys/（gitignore）に自動生成。Git/ZIP/ログへ秘密鍵を入れない。
+  generate-license.mjs は --private-key-path 必須、リポジトリ内の鍵（試験鍵を除く）を拒否、試験鍵は --test 必須。
+  release ビルド（vite --mode release）は release-config.json 必須・試験鍵/プレースホルダー/秘密成分 d を拒否。
+
+D23 検索のスニペットは NFKC で長さが変わる場合だけ正規化後の文字列を表示（原文は変更しない）。
+
+D24 PWAの「共有」は Web Share API（files）対応時のみ表示。HTML保存は常に独立した代替として残す。
+
+D25 コントラスト：提案ボックス（#E9E1E7）上の補足文は muted #71666D だと 4.29:1 で不足（axe serious）。
+  この背景上だけ #665B62（5.06:1）を使用。その他の組合せは実計算で4.5:1以上（muted/paper 4.74、muted/surface 5.36、
+  warning/paper 5.83、error/errorBg 5.85、focus/paper 5.96）。disabled（#71666D/#E4DDD9 4.09）は操作不可要素のため対象外。
+
+D26 書き出しファイル名は ASCII（koeito-report[-draft]-YYYYMMDD.html / .pdf、koeito-quotes-YYYYMMDD.csv、
+  koeito-backup-YYYYMMDD.koeito）。一部ブラウザが非ASCIIのダウンロード名を捨てて拡張子のない "download" にするため。
+  調査名をファイル名に出さない効果もある。
+
+D27 PWA の service worker はキャッシュ照合で ignoreVary を使う（静的配信が Vary: Origin を付けると crossorigin 付きの
+  script/style/font がオフラインで一致しないため。AC12 で発見）。

@@ -71,7 +71,7 @@ main:focus { outline: none; }
 .brand-link img { width: 128px; min-width: 100px; height: auto; }
 .header-tag { font-size: 12px; line-height: 1.5; letter-spacing: .1em; font-weight: 500; color: var(--muted); }
 .header-right { display: flex; align-items: center; gap: 8px; }
-.header-menu { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; letter-spacing: .015em; text-decoration: none; }
+.header-menu { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 10px; border-radius: 6px; font-size: 14px; font-weight: 600; letter-spacing: .015em; text-decoration: none; }
 .header-menu:hover { background: var(--hover-secondary); }
 @media (max-width: 639px) {
   .site-header { height: 56px; }
@@ -325,7 +325,7 @@ button.tag { min-height: 44px; height: auto; border-radius: 0; cursor: pointer; 
 .proposal-box .en { font-family: var(--brand); font-size: 23px; line-height: 1.4; font-variation-settings: 'opsz' 96, 'SOFT' 30, 'WONK' 0; }
 .proposal-box b { font-size: 13px; }
 .proposal-box p { margin: 0; white-space: pre-wrap; }
-.proposal-box small { display: block; color: var(--muted); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+.proposal-box small { display: block; color: #665B62; font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
 .finding-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin: 24px 0 0; font-size: 13px; color: var(--muted); }
 .finding.compact { grid-template-columns: 80px minmax(0, 1fr); border-top-width: 1px; border-top-color: var(--line); padding-top: 24px; }
 .finding.compact > .num-brand { font-size: 42px; }
