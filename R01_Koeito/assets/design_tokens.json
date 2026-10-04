@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "colors": {
+    "paper": "#F2EEE5",
+    "surface": "#FFFCF6",
+    "ink": "#402A3D",
+    "inkStrong": "#2F1D2C",
+    "apricot": "#F1AD7F",
+    "moss": "#334A42",
+    "mossBg": "#E4EAE3",
+    "muted": "#71666D",
+    "line": "#C7BDC0",
+    "controlBorder": "#83747D",
+    "warning": "#80511D",
+    "warningBg": "#F8E7C7",
+    "error": "#A22E38",
+    "errorBg": "#F8E6E7",
+    "focus": "#8B3F70"
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96
+  ],
+  "breakpoints": [
+    640,
+    960,
+    1200
+  ],
+  "container": 1200,
+  "fonts": {
+    "brand": "Fraunces",
+    "headingJa": "Noto Serif JP",
+    "body": "Noto Sans JP"
+  },
+  "fontSize": {
+    "h1": 40,
+    "h1Mobile": 28,
+    "h2": 26,
+    "h2Mobile": 22,
+    "body": 16,
+    "label": 14,
+    "caption": 13,
+    "source": 18
+  },
+  "lineHeight": {
+    "h1": 1.45,
+    "body": 1.85,
+    "source": 1.9
+  },
+  "radius": {
+    "button": 6,
+    "dialog": 12,
+    "paper": 0
+  },
+  "buttonHeight": 48,
+  "inputHeight": 48,
+  "iconSize": 20,
+  "borderWidth": 1,
+  "focusWidth": 3
+}

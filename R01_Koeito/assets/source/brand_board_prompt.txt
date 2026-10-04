@@ -1,0 +1,23 @@
+Use case: logo-brand / editorial brand poster.
+Create the final brand board for Koeito, a Japanese professional application that turns customer interview excerpts into evidence-backed improvement proposals. Use landscape 2560x1920 or similar high resolution 4:3. This is a designed editorial brand experience, not a corporate slide and not an asset catalog.
+The supplied reference 1 is the EXACT canonical horizontal logo. Reference 2 is its EXACT app icon. Preserve the word Koeito, capital K, and the distinctive paired quotation mark with connecting underline. The logotype is Fraunces medium serif. Do not invent a new mark or replace the font with a sans serif.
+Art direction: Margin, a contemporary editorial research studio. Deep plum #402A3D, apricot #F1AD7F, warm paper #F2EEE5, dark moss #334A42. No blue, neon, gradients, glass, abstract 3D, people or photos. Crisp almost flat graphic design, precise thin rules, generous intentional margins, severe size contrast, thoughtful asymmetric typography. Business credibility, quietly memorable.
+Composition: an asymmetric spread. Left 38% a deep plum field with enormous ivory Koeito wordmark near the top, a small icon integrated nearby. Under it, set the main Japanese line in refined readable Mincho serif, three short lines, much larger than body. Add a tiny vertical editorial folio R01 / 2026 at the far left. Lower left show the original quote mark large in apricot with a purposeful baseline leading into the right spread. The right 62% is paper, dominated by a large beautiful functional UI crop of an evidence-to-proposal workspace; not in a laptop device frame. At the bottom right, overlap a modest printed A4 report mockup, rotated only two degrees, with readable large headings. Use no even card grid. Color information should be a narrow asymmetrical ribbon or swatch margin with HEX labels, not a color-palette box. Font pairing information should look like type specimens woven into the editorial typography. Keep the design uncluttered and highly intentional.
+Text, verbatim and with clear Japanese glyphs:
+Koeito
+顧客の声を、
+根拠のある
+提案へ。
+顧客の話を聞く、制作・企画の方へ。
+発言と改善案を、根拠でつなぐ。
+そのまま渡せる提案書に仕上げる。
+VOICE → EVIDENCE → NEXT STEP
+ローカル保存 / 買い切り設計
+声と提案を、一本の糸で。
+Fraunces × Noto Serif JP
+Noto Sans JP / UI
+#402A3D  #F1AD7F  #F2EEE5  #334A42
+Right side UI: slim top navigation, no sidebar, four stages with Japanese labels 声を集める / 声を束ねる / 気づき / 提案書. A large Japanese Mincho headline その声から、何を変える？. One evidence section with large margin number 01, title 送料が見えない不安。, an underlined supporting excerpt 「カートに入れる前に迷います。」 with source label P02 / S02, and a separate contrary voice 「説明が増えると見づらい。」 labeled P03 / S03. A thin horizontal rule then the apricot or pale plum proposal strip labelled 次の一手 and text 送料の目安を、商品詳細に。. No charts, KPI cards, fake metrics, side panels or blue buttons. Every UI fragment has a purpose.
+Printed report mockup: Koeito small masthead, title 購入体験の改善提案, large margin 01, labels 気づき / 根拠 / 次の検証. Small lines of layout can be graphic rules, not gibberish text.
+Small footer: BRAND & UI CONCEPT / 架空データ・UI設計見本.
+Use the Japanese audience/value three lines clearly, no paragraph of unreadable microtext. This poster must immediately communicate who it is for, what it does, and what they get. Strong distinctive typography rather than decorative objects. All text must be spelled accurately, especially Koeito. Preserve legibility and whitespace. Do not label rectangular sections as Logo, Colors, Typography. Do not reproduce any existing studio's design.

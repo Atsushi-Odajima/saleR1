@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-electron/
+out/
+release-test/
+.dev-keys/
+test-results/
+playwright-report/
+public/fonts/
+public/brand/
+public/licenses/
+release-config.json
+*.koeito
+*.private.jwk.json
+*.pem

@@ -1,0 +1,395 @@
+R01 Koeito（コエイト）— Claude Code 完全版開発プロンプト
+2026-10-05 JST / revision 1.0 / UTF-8
+
+あなたはこの商品を実装するシニアエンジニア兼UI実装担当です。
+本TXT単独に機能・データ・UI・受入条件を含みます。企画書だけで止まらず、動く縦切り実装、検証、配布候補、引き継ぎまで進めてください。
+このTXT自体は実装済みアプリではありません。モック画像は設計見本であり、試験成功の証拠ではありません。
+
+A. 商品契約
+Koeito：顧客インタビューの文章から引用を残し、気づき・反証・改善案を結び付け、日本語の提出レポートを作る買い切りアプリ。
+ユーザーはフリーランスのUX/Web制作者、少人数の調査・企画担当。1案件3〜20資料の利用を中心にする。
+コアの流れ：調査作成→文章取込→原文から引用→テーマ→支持／反証を付けた気づき→改善案→公開内容点検→HTML/PDF。
+自動で結論を発見する・需要を保証する・統計的な代表性がある等は表示しない。
+UIは日本語。英語は商品名・資料番号程度。数値はグラフにせず必要な件数だけ文章で表示。
+初期4,980円、標準想定7,800円は価格検証案。販売開始・価格の確約・架空レビューをしない。
+見積請求、在庫、SOP研修、購入候補比較の既存商品へ戻さない。
+
+B. 開始時
+1. cwd、git status、既存AGENTS.md/CLAUDE.md、package.json、lockfileを確認し、既存作業を保護。
+2. ZIPがあればこのTXTの親を企画パックとし、同梱assetsを読む。新規app/に実装し、入力TXTや素材を上書きしない。
+3. 主要資料の内容を把握してdocs/SPEC.txt、docs/TASKS.txt、docs/DECISIONS.txtへ確定事項を記録。
+4. バージョンを推測して書かず、Node LTS・Electron・React・Vite等の現行安定互換を公式資料で確認しlockfile固定。
+5. 追加の細かな設計は本仕様の範囲で判断して記録。公開、購入、外部送信、実顧客ライセンス発行は本タスクに含めない。
+6. 本文のブランド仕様・データ条件は必須。見た目だけのデモ、保存できないフォーム、成功を返すだけのスタブで完了しない。
+
+C. 初回販売版の機能と境界
+実装：調査作成/改名/削除、参加者別名、TXT/CSV/貼付取込、原文不変保存、引用範囲選択、テーマ分類、気づき編集、支持/反証/文脈リンク、改善案、公開用伏せ字、並べ替え、検索、草案/正式HTML・PDF、バックアップ/復元、ライセンス取込、デモデータ、PWA、Windows配布。
+実装しない：AI API、モデル内蔵、音声認識、録画、PDF/DOCXの入力、画像分析、URL自動収集、外部サービス同期、会員登録、チーム同時編集、チャット、メール送信、アプリ内決済、多言語翻訳、統計検定、自動確信度。
+原文の編集はしない。修正版は新しい資料として追加し、引用を人が作り直す。自動アンカー移動による誤引用を避ける。
+ソースファイル名や実名は提出物へ自動流用しない。記録・取込の権利を持つ資料だけを使う旨を初回ヘルプに短く記載。
+
+D. 技術構成・配布
+React + TypeScript strict + Vite。CSS Modules/素のCSSとdesign_tokens。汎用SaaSテーマの導入禁止。
+Zod等で入力検証、Dexie/IndexedDB、Papa Parse（CSV）、WebCrypto、Vitest、Testing Library、Playwright、axe-core。
+Electron + electron-builderでWindows 11 x64用NSISユーザーインストーラーとportable.exeをビルド。
+WindowsもWeb版も同じrendererとdomain関数を使う。Electron専用APIはファイル保存・印刷だけに細く限定。
+Windows用userDataの絶対パスはapp.getPath('userData')から取得。portable.exeでも保存先は同じ固定appId用プロファイル、実行ファイルの隣をDBにしない。
+認証サーバー・DBサーバー・外部フォント・分析SDKなし。PWAはHTTPS静的配信、rendererの業務データは端末内。
+PWAはWindows配布版と同じ機能。端末間の自動同期なし。移動は暗号化バックアップを読み込む。変更を双方向マージしない。
+購入者にNode.js/Python/Dockerを要求しない。Windowsはインストーラー／実行ファイル、スマホはHTTPS URLからホーム画面追加。
+PWA配信URL・署名公開鍵・販売者連絡先はrelease-config.jsonで実際の値を渡す。本番配布は欠落すると失敗させる。架空の値を公開用へ埋めない。
+初回v1利用権は期限なし。運営者がPWA配信を停止してもWindows版とバックアップが使える構成。OS永続互換は保証しない。
+実装目安：縦切り2〜3日、販売候補全体8〜15開発日程度、50〜90時間の仮見積。AI利用・習熟度・署名/実機検証で変動。1日完成とは約束しない。
+
+E. データモデル（全IDはUUID、日時UTC ISO8601、表示は利用端末timezone）
+DB名koeito-v1。schemaVersion=1。IndexedDB versionは整数。全てZod等で定義し、未知プロパティは読込時に拒否。
+共通：id:string、createdAt、updatedAt、revision:integer>=1。ユーザー文字列はplain text、HTML不可。
+
+Project
+ id,title(1..80文字),question(1..300),periodStart/End(YYYY-MM-DD|null),limitations(0..2000),createdAt,updatedAt,revision,nextSourceNo,nextParticipantNo。
+ participantCountは実参加者行から集計。IDではなくP01等のaliasを画面・提出へ使う。
+Participant
+ id,projectId,alias(1..24、プロジェクト内一意),internalNote(0..1000、非公開),timestamps,revision。
+Source
+ id,projectId,sourceNo(整数、欠番再利用なし),participantId,title(1..120、内部),originalFilename|null（内部）,text(1..20000 Unicode code points),sha256(正規化後UTF-8),importBatchId,timestamps,revision。
+ 改行CRLF/CR→LFのみ正規化。Unicode NFC等の正規化やtrimを勝手にしない。先頭BOM1文字だけ除去。以後text不変。
+ sourceNoの表示S01。段落はLFで分割した行をP001から番号付け。空行も位置に数える。
+Excerpt
+ id,projectId,sourceId,startUtf16,endUtf16（半開区間）,quote（text.slice一致必須）,themeIds:string[],note(非公開0..1000),redactions:[{startUtf16,endUtf16}]（quote内の範囲）,publicReviewedHash:string|null,timestamps,revision。
+ 原文quoteは編集不可。公開用はredactionsの区間を「［伏字］」へ置換して算出。伏字以外の言い換えは解釈欄で行う。
+ redactionsはソート済み非重複。隣接区間は統合。UTF-16のサロゲート/書記素の途中を分割しない。1引用1..800code points。
+ 公開確認ハッシュはpublicTextとparticipant.aliasとsourceNoと範囲からSHA256。変更されたら要再確認。
+Theme
+ id,projectId,label(1..40、同一調査でNFKC+trim+casefold相当の重複警告),description(0..300),order整数,timestamps,revision。
+ label本体は保存時trimのみ。検索用正規化キーを別に持つ。
+Finding
+ id,projectId,title(1..80),interpretation(0..1500),proposal(0..1000),expectedChange(0..500),nextCheck(0..800),counterCheck('not_checked'|'none_found'|'found'),counterNote(0..800),status('draft'|'ready'),included:boolean,order整数,timestamps,revision。
+EvidenceLink
+ id,projectId,findingId,excerptId,role('supports'|'contradicts'|'context'),order整数。
+ 同一finding+excerptは一意、role変更で重複生成しない。excerptを複数findingに使うのは可。
+ExportRecord
+ id,projectId,format('html'|'pdf'),draft:boolean,projectRevision,createdAt。外部送信用の内容や生成済み全文をDBに重複保存しない。
+Settings
+ key,value。テーマはlight固定。最終バックアップ作成時刻、ライセンスpayloadと署名、表示設定のみ。password・秘密鍵は保存しない。
+
+上限：1端末50調査、1調査100資料/100参加者/2000引用/100テーマ/50気づき、1調査原文合計100万code points、入力ファイル10MiB、CSV1000行まで（今回取込100資料上限）、バックアップ30MiBまで。
+通常性能の検証fixtureは20資料×10,000文字、400引用、20気づき。上限で無理なDOM描画をしない。
+削除：Project削除は対象の関連行を1 transactionで削除。タイトル再入力で確定。30日保持等の隠れ残存を設けない。
+Source/Excerpt削除前に影響引用数・気づき数を表示。確認後cascadeし、根拠を失ったFindingはdraftへ戻す。テーマ削除は引用のthemeIdsから外すだけ。
+ExportRecordの対象project削除時も削除。ユーザーが外へ保存したファイルは自動削除できないと説明。
+
+F. 引用・集計の正しさ
+JavaScript文字位置はUTF-16。UIの文字数上限はArray.fromによるcode point数。両者を混同しない。
+selection Rangeから読書面の生テキストに対する範囲を算出。装飾ノード、欄外番号、非表示文字をoffsetに含めない。
+source.text.slice(start,end)===quoteを保存時・復元時・正式出力時に検証。逸脱なら壊れたリンクとして拒否し、勝手に別箇所へ付け替えない。
+Intl.Segmenter(granularity:'grapheme')で選択端点を検証。環境非対応なら代替ライブラリを同梱し同じ結果にする。
+同source/rangeは新規引用を作らず既存引用へ案内。重複資料はsha256一致を警告、別participantの同文は明示承認で許す。
+気づきの「支持した人数」はsupportsリンクのdistinct participantId。引用数とは別。context/contradictsは分母に混ぜない。
+参加者数が同じでも母集団の割合ではない。「全員のニーズ」等へ自動変換しない。反証を1件入れても機械的に確信度を上げない。
+sourceNoやaliasと実名対応は内部にしか置かない。期間不明は未設定とし、今日の日付を調査日として自動設定しない。
+
+G. 取込・検索
+TXT：UTF-8（BOM可）を既定、Shift_JISを明示選択可。デコードエラー/置換文字があればプレビューでやり直す。NULは拒否。
+CSV：RFC4180相当。引用符、カンマ、CRLF、セル内改行をライブラリで解析。split(',')禁止。
+列割当：participant（必須）、text（必須）、title（任意）。1行=1資料。participant一致は既存別名への結合候補を提示して確認。
+取り込みはプレビュー→件数・列・別名を確認→1 transactionで全行確定。上限/不正な行があれば行番号を表示、全件未確定。勝手なスキップなし。
+重複警告時は「今回は取り込まない／別資料として取り込む」を選べる。二重クリックをtokenとtransactionで防ぐ。
+検索：調査内のsource.text、excerpt.quote、theme.label、finding.title/interpretation/proposalを対象。大小・全半角を検索時のみ正規化。元本文を変更しない。
+全文の入力debounce150ms、100件以上は上位100と続きを表示。無効な正規表現実行はしない。ユーザー入力はただの文字列。
+
+H. 保存・復旧・複数タブ
+500ms debounceで変更保存、blurでflush。commit前に保存済みと表示しない。前revision一致をtransaction内で検証。
+構造変更・削除・取込は原子的transaction。crypto、fetch、長い待機をtransaction内に置かない。
+navigator.locksで同originのwriterを1つにする。二つ目は読み取り専用とし、最初を閉じて「編集権を取得」する。stealしない。
+非対応環境は編集不可として環境案内を出す。無理な疑似ロックを実装しない。対応対象は試験で判定。
+ElectronはrequestSingleInstanceLockも使う。タブ復帰/ロック再取得時はrevisionを読んでから編集。
+容量不足はデータを保持し、未保存表示、直近データをバックアップへ退避する動線。失敗時に全DBを消す修復はしない。
+PWAはnavigator.storage.estimate/persistを利用可能な場合に呼ぶ。永続化が承認されたかを表示。端末保存はバックアップとは異なる。
+更新は旧SWでの編集を続け、バックアップ案内後に利用者操作で再読込。勝手なskipWaitingによる入力消失禁止。
+DB migration前にローカルsnapshotを別DBへ原子的に保存し、完了後も直前1版を保持。大きな変更前は暗号化ファイルバックアップを促す。
+v1.0ではmigrationなしでもv1→v2の試験fixtureを作り、未来schemaVersionを拒否する。
+
+I. バックアップと移動
+拡張子.koeito、UTF-8 JSON envelope、全調査または選択1調査を暗号化保存。
+形式：{format:'koeito-backup',version:1,kdf:{name:'PBKDF2',hash:'SHA-256',iterations:600000,salt:base64},cipher:{name:'AES-GCM',iv:base64,tagLength:128},payload:base64}。
+saltは16 random bytes、ivは12 random bytes、毎回crypto.getRandomValues。AES鍵256bit。AADは固定UTF-8 'koeito-backup:1'。
+passwordは12..128 Unicode code points、確認入力。保存・ログ・URLへ残さない。鍵はメモリのみ、処理終了後参照を捨てる。
+暗号化payloadは{schemaVersion:1,exportedAt,appVersion,projects,participants,sources,excerpts,themes,findings,evidenceLinks}。ライセンスとSettingsは含めない。
+個別バックアップも参照先を全て含む。未参照の他調査データを混ぜない。gzip/ZIP圧縮なし。
+復元：ファイル30MiB上限→envelope検証→PBKDF2 iterationsが600000であること確認→復号→schema/上限/参照/offset検証→件数表示→新規調査としてatomic追加。
+既存のUUIDと衝突しないよう全entity IDを作り直し全参照をmapする。sourceNo/alias/orderは維持。重複projectタイトルには「（読込）」と付ける。
+同じfileの再取込はdigest一致を警告して承認を取る。元の調査を置換・削除しない。
+破損/誤passwordは内容未変更。future versionは拒否。大きいiterations等を読込で受け入れてCPUを占有させない。
+暗号化されるのはバックアップファイル。作業中のIndexedDBは平文であり、端末全体を守るOSロック等の利用をヘルプで説明。
+バックアップボタン完了は「ファイルを作成しました」。ブラウザで実際の保存先への書込確認ができなければ保存確認済みと断定しない。
+
+J. 公開用レポートとCSV
+Finding status readyの条件：title,interpretation,proposal,nextCheckが空でない、supports>=1、counterCheckの選択、counterCheck=none_found/foundならcounterNote必須、foundならcontradicts>=1。
+正式レポート：included>=1、全includedがready、全linked excerptのpublicReviewedHash一致、Project.questionとlimitations入力。not_checkedを選択した場合は「反証確認は未実施」を必ず出力。
+草案は不備を許すが表紙/各不備セクションに草案表示。正式条件を満たさないままタイトルだけ変えて出力しない。
+ReportDTOを明示的な許可リストで組み立てる。DBオブジェクトのspread禁止。
+ReportDTOにはtitle/question/期間/limitations/採用findingの公開文字列/公開引用/alias/出典番号/件数のみ。source.text、originalFilename、内部メモ、password、licenseを含めない。
+引用の伏字はテキスト自体を置換。CSSで隠す・黒い四角で覆う・title属性やDOMデータに原文を残す方式は禁止。
+HTMLをtext nodeで組むか必ずescape。DOCTYPE+meta charset+埋込CSS+埋込fontのみ。script、イベント属性、リモートURL、iframe、画像なし。
+HTMLに印刷CSSを含める。印刷するのはReportDTOの文書のみ。アプリ全体をhiddenにして印刷する方式にしない。
+Windowsは隔離した印刷専用BrowserWindowへ生成したローカルHTMLだけ渡し、フォント読込完了を待ってprintToPDF。任意URLは渡さない。
+PWAはユーザー操作で新規文書ウィンドウ→印刷。iOSでpopupが拒否されたらHTML保存へ。PDFキャンセルはExportRecord成功として扱わない。
+引用CSVは任意の明示操作で出力：alias/sourceNo/段落/公開quote/themeLabels。内部quoteを出さない。
+CSV出力はUTF-8 BOM、CRLF、全フィールドquoted、quote倍化。先頭空白・制御文字後も含め=,+,-,@で始まるセルへapostropheを付け、表計算の式として実行されないようにする。
+販売文に「完全匿名化」と書かない。伏字の確認は人が行う。
+
+K. 買い切りライセンス・デモ（簡潔なオフライン検証）
+PWAの静的shellは配信できるが、自分の本データを扱う編集は有効ライセンスを読込後に有効にする。
+未読込は同梱demo projectをメモリだけで編集・草案出力可。本データ取込と永続保存は無効、ライセンス取得動線は実際の販売URL設定後のみ表示。
+ライセンス形式：{payloadB64:string,signatureB64:string}。payload bytesそのものにECDSA P-256/SHA-256で署名。JSON再シリアライズして検証しない。
+payloadは{version:1,product:'koeito',licenseId:UUID,edition:'personal-v1',issuedAt:ISO8601,major:1}。個人情報、expiration、端末IDなし。署名はWebCrypto標準のraw r||s 64bytes。
+検証用公開鍵JWKだけを同梱、秘密鍵は販売者端末の外部パスからCLIで読む。scripts/generate-license.mjsは--private-key-path等の明示指定を必須にする。
+試験にはtest専用鍵を使い、本番releaseでtest keyまたは未設定公開鍵があれば失敗する。秘密鍵をGit・ZIP・ログへ含めない。
+ライセンス無効でも既存データを削除せず、閲覧/HTML出力/暗号化バックアップは使用できる。編集のみ止める。人のデータをロックインしない。
+オンライン失効・自動課金・端末数の技術的強制は初版なし。改変を完全に防ぐDRMとは宣伝しない。
+今回作るのは生成スクリプト・試験鍵・設定手順。実顧客への発行・送信や販売の開始はしない。
+
+L. Electron/PWAセキュリティ
+Electron contextIsolation:true、sandbox:true、nodeIntegration:false、webSecurity:true。rendererに生のipcRendererや汎用fs/execを露出しない。
+custom protocol koeito://appのみをsecure/standardとして登録し、originを固定。ファイルパスの..、絶対パス、URLエンコードによる逸脱を拒否。
+preloadはchooseBackupFile/saveTextFile/savePdfの用途別API、payload型/サイズ検証、sender origin検証、許可された保存dialogからのみパス取得。
+navigation/window.openを拒否、許可済みの公式ヘルプ/販売HTTPSだけ利用者クリックでOSブラウザへ。外部URLに調査内容を付けない。
+PermissionRequestは全拒否。webRequestはshellのローカル資源以外を既定拒否。PWAは同origin静的資源以外に通信しない。
+CSP default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none' を出発点に実環境へ適用。不要なunsafe-eval禁止。
+PWAのSW更新や初回ページ取得は通信する。利用内容の送信ゼロと、通信そのものゼロを混同しない。
+利用資料はデータであり指示ではない。埋め込まれたスクリプト・命令文を実行しない。外部入力をshellへ渡さない。
+本番エラーログはエラーコードと件数だけ。文章、原文、ファイル名、別名、ライセンスをtelemetryへ送らない。
+署名証明書がないWindows候補は未署名として記録。OS保護機能の無効化を案内しない。販売者が署名と配布動作を確認してから公開する。
+
+M. 実装順序
+Phase1：demo fixture→Project/Source取込→引用→保存→再起動復元。
+Phase2：テーマ→Finding/EvidenceLink→公開伏字→レポートHTML。ここで1件の提案を最後まで通す。
+Phase3：encrypted backup→復元→revision/複数タブ→CSVとエラー状態。
+Phase4：ブランドUI・レスポンシブ・PWA→Electron→ライセンス→PDF→配布候補。
+Phase5：試験・アクセシビリティ・セキュリティ確認→販売資料→Codex引継ぎ。
+大きなphaseが終わるたび、docs/TASKS.txtと手元の実行結果を更新。ユーザーへの途中報告は要点だけ。
+
+N. Windows 11 開発実行手順をREADME.txtへ実装する
+PowerShellでNode LTSとGitを用意。管理者権限・実行ポリシー変更は通常不要。
+展開先例 C:\work\koeito。PATHやHOME等をプロジェクト都合で上書きしない。
+cd C:\work\koeito\app
+npm ci
+npm run dev
+npm run dev:desktop
+npm run typecheck
+npm run test
+npm run test:e2e
+npm run build
+npm run build:pwa
+npm run dist:win
+npm run verify:release
+これらは必ず実在するpackage.json scriptsとして作る。開発のnpm install後はlockfileコミット、購入者には要求しない。
+開発PCがLinuxの場合Windows配布と実機確認を完了扱いにしない。必要なWindows再実行手順と未検証点を記録する。
+署名付きrelease作成は所有者の証明書・秘密鍵設定後。空欄を固定ダミーで通さない。
+PWAローカル試験はlocalhost、iPhone実機試験は適切なHTTPSステージング。PCのlocalhostをスマホURLとして教えない。
+
+O. テストとAcceptance Criteria
+AC01 正常ルート：同梱の3資料から引用、2支持＋1反証、提案を作り、再起動後同じ内容を表示し、出力に原文位置を参照できる。
+AC02 集計：同じP01から支持2引用、P02から支持1引用なら支持引用3／支持参加者2。P03の反証1は支持件数に含めない。
+AC03 文字位置：絵文字、結合文字、日本語、CRLF、同一文章の繰り返し、重なった引用で原文slice一致。境界が壊れた入力は拒否。
+AC04 取込：引用符/セル内改行/カンマ/SJIS/空必須列/壊れたUTF-8/1001行/10MiB超をfixtureで確認。失敗後DB件数は不変。
+AC05 重複・削除：連打で1回だけ作成。根拠元を削除すると該当Findingがdraftへ戻り、正式出力をブロック。
+AC06 保存失敗：quota、transaction失敗、revision競合を注入し、保存済みを表示しない。入力とバックアップ退避経路が残る。
+AC07 複数タブ：同時編集させず、writerを閉じると再取得できる。復帰した古いタブから上書きしない。
+AC08 バックアップ：全/1調査の往復、誤password、改ざん、future version、不正参照、超過サイズ、重複IDを検査。失敗は0件変更。
+AC09 公開漏洩：入力に固有文字列SECRET_SOURCE_A／SECRET_NOTE_B／本名テスト値を置く。HTML、PDF抽出テキスト、CSV、DOM属性を走査し、非公開値が含まれない。CSS伏字では合格させない。
+AC10 PDF：Windows版で日本語、長い見出し、複数ページ、300/800文字引用、0件/50気づき。端の切れ、見出し孤立、空白ページ、豆腐文字を検査。
+AC11 iPhone：Safariとホーム画面PWAで取込・引用・編集・HTML保存・バックアップ復元・印刷を実機確認。未実施はUNVERIFIED。スクリーンショットだけで操作合格にしない。
+AC12 offline：インストール済みPWAとWindows版の通信を切って取込からHTMLとbackupまで完走。shellの初回取得はonlineが必要と明記。
+AC13 通信：架空データの操作中、外部リクエストに調査データが含まれず、外部API/analytics/フォントCDNが0件。
+AC14 レスポンシブ：360×800 / 390×844 / 768×1024 / 1440×960、200%拡大。本文の横overflowなし、ボタン44px以上、キーボードとVoiceOver相当の読み順を確認。
+AC15 a11y：ラベル、focus表示、モーダル復帰、aria-live、色だけに依存しない。axe severe/critical 0。自動検査で読みやすさを保証したとしない。
+AC16 性能：20資料×1万文字/400引用で、指定Windows 11テスト機を記録し初回表示3秒目標、検索1秒目標。計測条件と実測値を残す。未達は原因と対処。
+AC17 license：test署名正常／1byte改変／別product／major違い／不正JSON／private key混入検査。releaseに試験鍵があれば失敗。
+AC18 配布：Node等のないWindows 11試験環境でインストール→初回起動→ライセンス→1件出力→終了再起動。PWA-distのHTTPS配信設定と直URL遷移も確認。
+AC19 ブランド：Inter/青/KPIカード/常設左sidebar/3paneを入れない。同梱ロゴ綴り、tokens、desktop/mobile見本と比較。
+AC20 完成区分：実行コマンド、日付、環境、期待、実測、pass/fail/unverifiedをdocs/TEST_REPORT.txtへ。未実行を成功にしない。
+テストは実装関数のコピーを期待値にしない。独立fixtureと検証しやすい具体値を使う。失敗assertを消して通さない。
+
+P. 販売用配布物と引継ぎ
+release/ にKoeito-Setup-x.y.z.exe、Koeito-Portable-x.y.z.exe、PWA静的dist.zip、README_JA.txt、QUICKSTART.txt、FAQ.txt、THIRD_PARTY_LICENSES.txt、SHA256SUMS.txt。
+販売者用：別のsource.zip（node_modulesなし）、運用手順、オフラインライセンス発行手順、公開鍵配置、署名手順、SUPPORT_POLICY_DRAFT.txt。
+購入者用に開発ソース・秘密鍵・試験鍵・架空の購入実績を混ぜない。価格・連絡先が未確定なら販売ページ原稿はDRAFT。
+marketing/PRODUCT_PAGE_JA.txt：誰が/何を入れ/何が出るか、必要環境、手動移動、非対応の入力、サポート範囲を明記。
+CLAIMS_LEDGER.csv：各販売主張/対応機能/試験証拠/確認日/未確認を対応。時短率・売上・導入件数を創作しない。
+HANDOFF_TO_CODEX.txt：現在commit、変更範囲、起動手順、試験結果、未検証環境、優先課題、データmigration、release artifacts、素材参照、版番号。
+Codex用指示：このTXT、実物差分、TEST_REPORTを照合し、データ損失・公開漏洩・引用アンカー・Windows/PWA配布を優先してレビューと修正を実行。見た目を一般的なSaaSへ置換しない。
+最終報告は実装済み／検証済み／未検証／販売前に必要な作業を分ける。状態はREVIEW_READYまたはBLOCKED。
+実装が終わっていなくても動く到達点・再開コマンドを保存。将来自動完成するとは約束しない。
+
+Q. 同梱素材参照
+企画パック相対：assets/brand_board.png、assets/logo_horizontal.png、assets/logo_mark.png、assets/pwa_icon_192.png、assets/pwa_icon_512.png、assets/apple_touch_icon_180.png。
+正規ベクター：assets/source/logo_horizontal.svg、logo_horizontal_reverse.svg、logo_mark.svg、pwa_icon.svg、icons.svg。
+数値：assets/design_tokens.json。見本：assets/source/ui_reference.html、assets/ui_desktop.png、assets/ui_mobile.png。
+assets/fonts/*.ttfとlicenses/*-OFL.txtを同梱配信し著作権・ライセンス文を保つ。フォント単体を販売しない。
+ロゴのSVGはアウトライン。UIの文字はWebfont。勝手に似たフォントへ置換しない。
+単体TXTのみの場合は同梱素材を捏造せず、本仕様の配色・タイポグラフィ・画面構成で仮実装し、正式ロゴの適用だけASSET_PENDINGに記録。開発そのものは止めない。
+
+R. 参照する公式技術資料（実装時に現行版確認）
+https://www.electronjs.org/docs/latest/tutorial/security
+https://dexie.org/docs/Dexie/Dexie.transaction()
+https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API
+https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey
+https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria
+市場情報・名称調査は02_market_and_name_research.txt。商標未確認。
+
+S. ブランドと全画面の数値仕様（ここからも必須）
+
+R01 Koeito — ブランド・UI仕様 / revision 1.0
+本ファイルの数値は実装仕様。brand_board.pngの演出より本仕様・SVG・design_tokens.jsonを優先する。
+
+1. ブランド
+名称 Koeito / コエイト。声＋糸。タグライン「顧客の声を、根拠のある提案へ。」
+冒頭3行：「顧客の話を聞く、制作・企画の方へ。」「発言と改善案を、根拠でつなぐ。」「そのまま渡せる提案書に仕上げる。」
+語調：断定しすぎない、具体的、簡潔。自動で真実が見つかる、成功を保証する、と書かない。
+ビジュアル言語：引用符、原文を指す細い線、欄外の参照番号、書類の折り返し。人物・写真・球体なし。
+ロゴの正式綴りはKoeito。横長ロゴは同梱SVGのアウトラインを正とし、打ち直さない。
+マークの意味：二つの発言を一つの根拠の糸で結ぶ。最小表示24px、周囲はマーク幅の1/4空ける。
+横長ロゴは最小幅100px。背景プラムではlogo_horizontal_reverse.svg、紙色ではlogo_horizontal.svg。
+
+2. カラー（役割固定）
+paper #F2EEE5：画面の大部分。surface #FFFCF6：入力・レポート用紙。
+ink #402A3D：本文・見出し・主ボタン。inkStrong #2F1D2C：hover/activeの主ボタン。
+apricot #F1AD7F：選択・引用の強調・ポスターのアクセント。本文はinkを載せる。白文字は禁止。
+moss #334A42：保存成功、支持する根拠。mossBg #E4EAE3。
+muted #71666D：副説明。line #C7BDC0：非操作の罫。controlBorder #83747D：入力境界。
+warning #80511D、warningBg #F8E7C7：注意。
+error #A22E38、errorBg #F8E6E7：エラー／反証。反証そのものを失敗とは扱わず、通常はアウトライン表示。
+focus #8B3F70：紙色上のフォーカス。プラム上は#F1AD7F。
+white #FFFCF6は純白の無機質さを避けるための紙の白。青は使わない。
+色だけで状態を伝えない。チェック／三角／文言を必ず併記。
+text 4.5:1、large text・主要な境界3:1を目安に実計算。淡い罫は区切りだけに使う。
+
+3. 書体
+同梱assets/fonts/Fraunces.ttf、NotoSerifJP.ttf、NotoSansJP.ttfをローカル配信。外部Google Fonts CDNを呼ばない。
+欧文ブランド・大型番号：Fraunces、500、opsz 96、SOFT 30、WONK 0。字間-0.04em、line-height 1.0。
+欧文本文・和文操作：Noto Sans JP、400/500/600/700。一般UIをセリフ体にしない。
+和文主見出し：Noto Serif JP、500/600。字間0.015em。
+H1 PC40px/1.45/500、スマホ28px/1.5。H2 26px/1.5/600、スマホ22px/1.5。
+本文16px/1.85/400/0。操作14px/1.4/600/0.015em。スマホ入力は16px以上。
+補足13px/1.6/400/0。欄外英数字12px/1.5/500/0.1em。12px未満のUI文字は使わない。
+読書中の原文18px/1.9、最大幅740px。引用カードは18px/1.75。
+tabular-numsは件数・ページ・時刻だけ。本文の全てを等幅にしない。
+ポスター題字のみ110〜220px相当を許す。UI見出しに持ち込まない。
+
+4. 空間・骨格
+spacing scale：4/8/12/16/24/32/48/64/96px。
+PC container：max-width 1200px、width calc(100% - 96px)。1440幅で左右120px。
+768〜1199px：左右32px、640〜767px：左右24px、360〜639px：左右20px。
+breakpoint：640 / 960 / 1200px。最小検証360px。
+12列grid、gap24px。gridは揃えの基準。常に12箱を作らない。
+ヘッダー高さ72px、下に64pxの4工程ナビ。PCでは両方非固定、作業画面の工程ナビだけsticky可。
+スマホは56pxヘッダー＋56px工程ナビ（4等分、短い和文ラベル）。上部固定領域112pxを超えない。
+画面本文上余白48px（スマホ28）、section間48px（スマホ32）。
+常設サイドバーなし。右詳細ペインなし。補助操作はdialogまたは独立画面。
+基本1px罫、章区切り2px、選択左線3px。input/button radius6px、dialog12px。レポート用紙0px。
+shadow通常none。dialogのみ0 16px 48px rgba(64,42,61,.18)。レポート見本のみ0 12px 32px rgba(64,42,61,.09)。
+
+5. 操作要素
+主button高さ48px、左右20px、ink背景surface文字、16px/600、icon20px、gap8。
+副button高さ44px、transparent背景、ink文字、controlBorder 1px。スマホ全操作のhit area44px以上。
+input高さ48px、padding12px 14px、surface背景、controlBorder 1px、font16px。
+textarea min-height144px、行間1.8、縦resize可。長文用は280px。
+icon：16px補助／20px標準／24px主操作、stroke1.75px、round cap、24viewBox。アイコンだけのボタンにもaria-label。
+タグは高さ28px、枠1px、左右10px、13px。選択操作として使う場合hit area44pxを確保。
+リンクは下線。本文内のリンクはhover以外でも認識できる。
+
+6. 全状態
+hover：主button inkStrong、副button #E9E0E5。罫線項目はsurface背景。160ms ease。
+focus-visible：3px focus outline＋3px offset。モーダル内trap、閉じたら起点へ戻す。
+active：背景inkStrong。押下でtransformを使わない。位置を動かさない。
+selected：apricot背景＋ink文字＋左3px罫＋aria-selected。現在工程は下線2pxと番号。
+disabled：背景#E4DDD9、文字#71666D、native disabled、理由を近接表示。opacityだけに依存しない。
+loading：実処理中だけ「読み込み中…」等を表示、aria-busy、重複操作防止。400ms未満は不要なスピナーを出さない。
+empty：「まだ発言がありません。TXT・CSVを取り込むか、文章を貼り付けます。」＋1つの主CTA。架空KPIで埋めない。
+success：「この端末に保存しました」＋チェック。自動保存は小さなステータス、連続toast禁止。
+warning：「この気づきには反証確認のメモがありません」＋確認へのリンク。通常作業を勝手に停止しない。
+error：フィールド直下＋ページ上部の要約。入力値を保持。「保存できませんでした。バックアップを保存してから再試行」等、復旧行動を伴う。
+保存状態：編集中→保存中→この端末に保存済み。失敗は未保存のまま。クラウド同期済みと表示しない。
+動き：フェード120〜160msのみ。prefers-reduced-motionでは停止。紙が舞うなどの演出なし。
+
+7. 画面別仕様（全て架空データと空状態を作る）
+
+S00 はじめる / #/
+目的：調査を再開、または新規作成。最重要情報は調査の題名と最後の保存。
+最重要操作：新しい調査を作る。優先順：再開→新規→バックアップ読込→ライセンス・設定。
+PC：左の大きな和文コピー＋右の新規CTA、その下に罫線の調査一覧。KPIなし。
+スマホ：題名→CTA→調査の1列リスト。追加メニューは44px。
+空：3件の架空サンプルを試す／新規。実データの調査へ自動混入しない。
+遷移：調査選択→S01、作成→title/question入力dialog→S01。
+失敗：作成内容保持、容量確認→バックアップ。既存調査を消して勝手に再初期化しない。
+
+S01 声を集める / #/p/:id/sources
+目的：材料を揃える。最重要情報は元資料と参加者別名の対応。
+主操作：文章を追加。優先：調査の問い→参加者／資料リスト→追加→取込結果。
+PC：横長の取込帯、下に資料番号／別名／タイトル／文字数を罫線で並べる。読みたい資料を選ぶ。
+スマホ：タイトル、別名、読書ボタンを縦に配置。表を横スクロールさせない。
+取込はdialog、CSVは列割当をS01a全画面で行う。UTF-8/SJISのプレビュー、件数・重複警告を確認後に確定。
+遷移：資料→S02。誤ったencoding・列不足→該当箇所へ、原データは未保存。
+
+S02 声を読む / #/p/:id/source/:sourceId
+目的：重要な一節を原文から選ぶ。最重要情報は原文と出典番号。
+主操作：選択した発言を残す。優先：戻る→出典情報→原文→引用の作成。
+PC：幅740pxの1段読書面、左48pxの欄外に段落番号。情報ペインを横に付けない。
+スマホ：画面全幅の本文。選択ハンドルと干渉しない下部の「選択を引用」ボタン。選択できない場合は段落を開く→開始／終了テキストを選ぶ代替。
+引用dialog：選んだ原文（編集不可）→テーマ複数選択→公開用伏せ字→保存。フォーカスを確実に移す。
+色付け範囲はrange分割して重なる引用を正しく表示。未選択で保存させない。
+失敗：範囲が不正なら作らず再選択。資料が無ければS01へ戻るリンク。
+
+S03 声を束ねる / #/p/:id/themes
+目的：引用をテーマ単位で読む。最重要情報は原文へのリンクと発言者。
+主操作：引用を気づきへ使う。優先：未分類→テーマごとの引用→気づき作成。
+PC：見出しとテーマの帯、その下に幅が可変の引用行。3列カード盤・無限キャンバスなし。
+スマホ：テーマ絞込select＋引用の縦一覧。複数選択は明示チェックボックス。
+テーマは新規・改名・統合・削除可。削除は引用の所属だけを外す。テーマ順は上下ボタン、ドラッグは追加手段。
+遷移：選択引用→S04新規。原文→S02で範囲を強調。0件→S01。
+失敗：他操作で対象削除時は選択を再読み込みし、既存の引用を複製しない。
+
+S04 気づきと次の一手 / #/p/:id/findings
+目的：観察から改善提案へ。最重要情報は気づき、その根拠と異なる声。
+主操作：提案書に採用。優先：見出し→解釈→支持引用→反証引用・確認メモ→改善案→検証方法。
+PC：1200px内、欄外80pxに01等、本文は1つの横長セクション。引用はその下に左右2列まで。PCでも常設右ペインなし。
+スマホ：全て縦。支持／反証はタブで隠さず見出しを分けて続ける。入力は独立の編集画面で完結。
+対象の問い、解釈、提案、期待する変化、次に確認することを別フィールドにする。
+根拠のない気づきは「仮説」と明示。引用数から重要度や確信度を自動計算しない。
+遷移：採用順上下→S05。足りない情報は該当findingへ戻す。
+失敗：保存競合は上書きせずローカル下書きのコピー・最新の読込を提示。
+
+S05 提案書を仕上げる / #/p/:id/report
+目的：外部へ渡す内容だけを点検。最重要情報は公開引用・別名・調査限界。
+主操作：HTMLを保存／PDFにする。優先：対象・範囲→気づき順→公開内容→書き出し。
+PC：プレビュー幅794px（A4比率）、設定は上の折りたたみ帯。横の編集パネルは作らない。
+スマホ：紙面の単純縮小をせず、同じ内容をレスポンシブ文書表示。PDF印刷は別印刷CSS。
+チェック：提案は1件以上、支持引用が各1件以上、反証確認済み／未実施の選択、限界記入、公開引用を確認。
+未実施なら出力へ「反証確認は未実施」と記載。反証なしを結論が確実の意味にしない。
+草案出力は根拠なしでも可能だが「草案・根拠未確認」表記を外せない。正式出力は検査合格時だけ。
+エラー：欠落findingに戻る。生成失敗でDBを変えない。PDF保存をOSダイアログでキャンセルしたら保存済み扱いにしない。
+
+S06 データと設定 / #/settings
+目的：バックアップ、復元、ライセンス、サポート情報。主操作：バックアップを保存。
+PC/スマホとも1段の設定セクション。破壊操作は最下段。
+容量、最終バックアップ作成時刻、端末保存とファイル保存の違いを短く表示。
+暗号化復元はファイル→パスワード→内容プレビュー→新規調査として読込。既存上書きは初版なし。
+ライセンスはファイル選択のみ。キー貼り付け、オンライン認証、端末指紋取得はしない。
+エラー：誤パスワード、破損、未来version、容量不足を区別できる範囲で説明。秘密をログへ出さない。
+
+8. 出力レポート
+A4縦、余白上18/下18/左右20mm、本文10.5pt/1.7。見出し18pt Serif、表題28pt Serif。
+1枚目：タイトル、調査の問い、実施期間、資料数、参加者別名数、調査限界。
+次に採用気づき：見出し→観察と解釈→支持引用→異なる声／未確認→提案→次の検証。
+出典はS01/P02の短い番号。内部の実名、元ファイル名、内部メモ、ライセンス番号を入れない。
+長い段落はページ分割可能。見出しをページ最下部に孤立させず、引用は8行以内のみbreak-inside:avoid。
+HTMLはUTF-8の単一ファイル。ローカルfontをdata URLで含め、JavaScript・外部リンク・外部fetchなし。
+PDFは同じHTMLの印刷から作る。WindowsはElectronのprintToPDF、PWAはブラウザ印刷・共有シート。
+PWAのOS別PDF保存は実機検証前に保証しない。HTML保存は常に独立の代替として残す。
+
+9. ブランド素材の扱い
+assets/logo_horizontal.png（透明）、logo_mark.png（透明）、pwa_icon_192.png／512.png（不透明）、apple_touch_icon_180.png。
+assets/source/*.svgは正規の再利用データ。assets/ui_desktop.png／ui_mobile.pngは数値仕様を可視化した静的モック。
+assets/brand_board.pngは演出したブランドポスター。厳密な余白・文字・色はUI specとベクターが正。
+assets/design_tokens.json、assets/source/ui_reference.htmlを実装の出発点として使う。見本HTMLのボタンはアプリ機能ではない。

@@ -1,0 +1,45 @@
+{
+  "name": "koeito",
+  "productName": "Koeito",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Koeito - 顧客の声を、根拠のある提案へ。",
+  "author": "Koeito seller (set in release-config.json)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist-electron/main.cjs",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {},
+  "dependencies": {
+    "dexie": "4.4.6",
+    "dexie-react-hooks": "4.4.0",
+    "fake-indexeddb": "6.2.5",
+    "graphemer": "1.4.0",
+    "harfbuzzjs": "1.6.2",
+    "papaparse": "5.7.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.4",
+    "@types/papaparse": "5.5.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "jsdom": "30.1.2",
+    "pdfjs-dist": "6.4.299",
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
+}

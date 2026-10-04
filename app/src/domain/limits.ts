@@ -1,0 +1,16 @@
+export const LIMITS = {
+  projectsPerDevice: 50,
+  sourcesPerProject: 100,
+  participantsPerProject: 100,
+  excerptsPerProject: 2000,
+  themesPerProject: 100,
+  findingsPerProject: 50,
+  textCodePointsPerProject: 1_000_000,
+  sourceTextCodePoints: 20_000,
+  importFileBytes: 10 * 1024 * 1024,
+  csvRows: 1000,
+  sourcesPerImport: 100,
+  backupBytes: 30 * 1024 * 1024,
+  excerptCodePoints: 800,
+  searchResults: 100,
+} as const;
